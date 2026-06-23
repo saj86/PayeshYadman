@@ -2,6 +2,16 @@ import { Injectable, NotFoundException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import * as bcrypt from 'bcryptjs'
 
+const USER_INCLUDE = {
+  userRoles: { include: { role: true } },
+  userAppAccess: true,
+} as const
+
+function stripHash<T extends { passwordHash?: string }>(user: T): Omit<T, 'passwordHash'> {
+  const { passwordHash: _, ...rest } = user
+  return rest
+}
+
 @Injectable()
 export class UsersService {
   constructor(private prisma: PrismaService) {}
@@ -20,46 +30,24 @@ export class UsersService {
     }
 
     const [data, total] = await Promise.all([
-      this.prisma.user.findMany({
-        where,
-        skip,
-        take: limit,
-        orderBy: { createdAt: 'desc' },
-        include: {
-          userRoles: { include: { role: true } },
-          userAppAccess: true,
-        },
-        omit: { passwordHash: true },
-      }),
+      this.prisma.user.findMany({ where, skip, take: limit, orderBy: { createdAt: 'desc' }, include: USER_INCLUDE }),
       this.prisma.user.count({ where }),
     ])
 
-    return { data, total, page, limit, totalPages: Math.ceil(total / limit) }
+    return { data: data.map(stripHash), total, page, limit, totalPages: Math.ceil(total / limit) }
   }
 
   async findOne(id: string) {
-    const user = await this.prisma.user.findUnique({
-      where: { id },
-      include: {
-        userRoles: { include: { role: true } },
-        userAppAccess: true,
-      },
-      omit: { passwordHash: true },
-    })
+    const user = await this.prisma.user.findUnique({ where: { id }, include: USER_INCLUDE })
     if (!user) throw new NotFoundException('کاربر یافت نشد')
-    return user
+    return stripHash(user)
   }
 
   async create(data: { email: string; fullName: string; password: string; roleNames?: string[]; appTypes?: string[] }) {
     const passwordHash = await bcrypt.hash(data.password, 10)
 
     const user = await this.prisma.user.create({
-      data: {
-        email: data.email,
-        fullName: data.fullName,
-        passwordHash,
-        isActive: true,
-      },
+      data: { email: data.email, fullName: data.fullName, passwordHash, isActive: true },
     })
 
     if (data.roleNames?.length) {
@@ -82,12 +70,8 @@ export class UsersService {
 
   async update(id: string, data: { fullName?: string; email?: string; isActive?: boolean }) {
     await this.findOne(id)
-    const updated = await this.prisma.user.update({
-      where: { id },
-      data,
-      omit: { passwordHash: true },
-    })
-    return updated
+    const updated = await this.prisma.user.update({ where: { id }, data })
+    return stripHash(updated)
   }
 
   async resetPassword(id: string, newPassword: string) {
