@@ -25,9 +25,8 @@ export default function DistrictPage() {
       setChecklists(Array.isArray(cl) ? cl : [])
     }).catch(console.error)
 
-    // Fetch regions to get locations
-    api.get('/regions').then((regions: any[]) => {
-      // We'll use a simplified location approach for the district user
+    api.get('/inspection-locations').then((locs: any[]) => {
+      setLocations(Array.isArray(locs) ? locs : [])
     }).catch(console.error)
   }, [])
 
@@ -83,15 +82,17 @@ export default function DistrictPage() {
             <form onSubmit={submitInspection} className="space-y-4">
               <div>
                 <label className="block text-xs text-text-secondary mb-1.5">محل بازرسی <span className="text-red">*</span></label>
-                <input
-                  list="locations-list"
+                <select
                   value={form.locationId}
                   onChange={e => setForm(p => ({ ...p, locationId: e.target.value }))}
-                  placeholder="نام یا کد محل را وارد کنید..."
-                  className="w-full px-3 py-2.5 bg-bg-dark border border-border rounded-xl text-sm focus:outline-none focus:border-gold/50"
                   required
-                />
-                <p className="text-[11px] text-text-dim mt-1">شناسهٔ محل را از فهرست محل‌های ثبت‌شده وارد کنید</p>
+                  className="w-full px-3 py-2.5 bg-bg-dark border border-border rounded-xl text-sm focus:outline-none focus:border-gold/50">
+                  <option value="">محل بازرسی را انتخاب کنید...</option>
+                  {locations.map((loc: any) => (
+                    <option key={loc.id} value={loc.id}>{loc.name}{loc.region ? ` — ${loc.region.name}` : ''}</option>
+                  ))}
+                </select>
+                {locations.length === 0 && <p className="text-[11px] text-yellow mt-1">هیچ محلی ثبت نشده — از پنل ستاد محل‌ها را اضافه کنید</p>}
               </div>
 
               <div>

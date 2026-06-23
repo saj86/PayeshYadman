@@ -15,6 +15,7 @@ export default function AdminPage() {
   const [users, setUsers] = useState<any>({ data: [] })
   const [settings, setSettings] = useState<any[]>([])
   const [newUser, setNewUser] = useState({ email: '', fullName: '', password: 'Admin1234', roleNames: 'CITIZEN', appTypes: 'CITIZEN' })
+  const [settingValues, setSettingValues] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (!user) { router.replace('/'); return }
@@ -24,15 +25,29 @@ export default function AdminPage() {
 
   async function loadAll() {
     try {
-      const [s, r, u] = await Promise.all([
+      const [s, r, u, sv] = await Promise.all([
         api.get('/dashboard/hq'),
         api.get('/regions/tree'),
         api.get('/users?limit=50'),
+        api.get('/settings'),
       ])
       setStats(s)
       setRegions(Array.isArray(r) ? r : [])
       setUsers(u)
+      if (Array.isArray(sv)) {
+        setSettings(sv)
+        const vals: Record<string, string> = {}
+        sv.forEach((s: any) => { vals[s.key] = s.value })
+        setSettingValues(vals)
+      }
     } catch(e) { console.error(e) }
+  }
+
+  async function saveSetting(key: string) {
+    try {
+      await api.put(`/settings/${key}`, { value: settingValues[key] || '' })
+      alert('ذخیره شد')
+    } catch (e: any) { alert(e.message) }
   }
 
   async function createUser(e: React.FormEvent) {
@@ -207,10 +222,11 @@ export default function AdminPage() {
                   <div className="flex gap-2">
                     <input
                       type={s.type}
-                      defaultValue={settings.find(x => x.key === s.key)?.value || ''}
+                      value={settingValues[s.key] ?? ''}
+                      onChange={e => setSettingValues(p => ({ ...p, [s.key]: e.target.value }))}
                       className="flex-1 px-3 py-2 bg-bg-dark border border-border rounded-lg text-sm focus:outline-none"
                     />
-                    <button className="px-3 py-2 border border-border rounded-lg text-xs text-text-muted hover:border-gold/40 hover:text-gold transition-all">ذخیره</button>
+                    <button onClick={() => saveSetting(s.key)} className="px-3 py-2 border border-border rounded-lg text-xs text-text-muted hover:border-gold/40 hover:text-gold transition-all">ذخیره</button>
                   </div>
                   <div className="text-[11px] text-text-dim mt-1 font-mono">{s.key}</div>
                 </div>

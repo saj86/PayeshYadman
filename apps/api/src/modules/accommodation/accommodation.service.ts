@@ -1,33 +1,52 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+
+const PLACE_INCLUDE = { region: true, _count: { select: { requests: true } } } as const
 
 @Injectable()
 export class AccommodationService {
   constructor(private prisma: PrismaService) {}
 
-  async getPlaces(regionId?: string) {
+  getPlaces(regionId?: string) {
     return this.prisma.accommodationPlace.findMany({
       where: { isActive: true, ...(regionId ? { regionId } : {}) },
-      include: { region: true, _count: { select: { requests: true } } },
+      include: PLACE_INCLUDE,
+    })
+  }
+
+  getMyPlace(managerId: string) {
+    return this.prisma.accommodationPlace.findFirst({
+      where: { managerId },
+      include: { ...PLACE_INCLUDE, manager: { select: { fullName: true, email: true } } },
     })
   }
 
   async createPlace(data: any) {
-    return this.prisma.accommodationPlace.create({ data })
+    return this.prisma.accommodationPlace.create({ data, include: PLACE_INCLUDE })
   }
 
   async updatePlace(id: string, data: any) {
-    return this.prisma.accommodationPlace.update({ where: { id }, data })
+    return this.prisma.accommodationPlace.update({ where: { id }, data, include: PLACE_INCLUDE })
   }
 
-  async getRequests(userId?: string) {
+  async getRequests(callerId: string, callerRoles: string[]) {
+    const isAdmin = callerRoles.some(r => ['SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT'].includes(r))
+    const isManager = callerRoles.includes('ACCOMMODATION_MANAGER') && !callerRoles.includes('SUPER_ADMIN')
+
+    if (isManager) {
+      const place = await this.prisma.accommodationPlace.findFirst({ where: { managerId: callerId } })
+      if (!place) return []
+      return this.prisma.accommodationRequest.findMany({
+        where: { placeId: place.id },
+        orderBy: [{ status: 'asc' }, { createdAt: 'desc' }],
+        include: { place: true, requester: { select: { fullName: true, phone: true } } },
+      })
+    }
+
     return this.prisma.accommodationRequest.findMany({
-      where: userId ? { requesterId: userId } : {},
+      where: isAdmin ? {} : { requesterId: callerId },
       orderBy: { createdAt: 'desc' },
-      include: {
-        place: true,
-        requester: { select: { fullName: true } },
-      },
+      include: { place: true, requester: { select: { fullName: true } } },
     })
   }
 
@@ -35,7 +54,14 @@ export class AccommodationService {
     return this.prisma.accommodationRequest.create({ data: { ...data, requesterId } })
   }
 
-  async updateRequest(id: string, status: string) {
+  async updateRequest(id: string, status: string, callerId: string, callerRoles: string[]) {
+    const req = await this.prisma.accommodationRequest.findUnique({ where: { id }, include: { place: true } })
+    if (!req) throw new NotFoundException('درخواست یافت نشد')
+
+    const isAdmin = callerRoles.some(r => ['SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT'].includes(r))
+    const isManager = callerRoles.includes('ACCOMMODATION_MANAGER') && req.place.managerId === callerId
+    if (!isAdmin && !isManager) throw new ForbiddenException('دسترسی غیر مجاز')
+
     return this.prisma.accommodationRequest.update({ where: { id }, data: { status: status as any } })
   }
 }

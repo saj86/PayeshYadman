@@ -109,7 +109,9 @@ export default function SupportPage() {
                   </div>
                   <div><span className={`text-[11px] font-bold px-2 py-0.5 rounded-md ${u.isActive ? 'text-green bg-green-dim' : 'text-red bg-red-dim'}`}>{u.isActive ? 'فعال' : 'غیرفعال'}</span></div>
                   <div className="flex gap-1.5">
-                    <button onClick={() => resetPassword(u.id)} className="text-[11px] px-2 py-1 rounded border border-border text-text-muted hover:text-text-primary hover:border-border/80">بازنشانی رمز</button>
+                    {!u.userRoles?.some((ur: any) => ur.role?.name === 'SUPER_ADMIN') && (
+                      <button onClick={() => resetPassword(u.id)} className="text-[11px] px-2 py-1 rounded border border-border text-text-muted hover:text-text-primary hover:border-border/80">بازنشانی رمز</button>
+                    )}
                   </div>
                 </div>
               ))}

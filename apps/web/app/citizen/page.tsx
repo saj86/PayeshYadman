@@ -25,6 +25,9 @@ export default function CitizenPage() {
   const [lostForm, setLostForm] = useState({ name: '', age: '', description: '', lastSeenLocation: '', contactPhone: '' })
   const [emergencyForm, setEmergencyForm] = useState({ type: 'پزشکی', description: '' })
   const [submitted, setSubmitted] = useState('')
+  const [myAccReqs, setMyAccReqs] = useState<any[]>([])
+  const [myLost, setMyLost] = useState<any[]>([])
+  const [myEmergencies, setMyEmergencies] = useState<any[]>([])
 
   useEffect(() => {
     if (!user) { router.replace('/'); return }
@@ -32,9 +35,15 @@ export default function CitizenPage() {
     Promise.all([
       api.get('/reports'),
       api.get('/accommodation/places'),
-    ]).then(([r, p]) => {
+      api.get('/accommodation/requests'),
+      api.get('/lost-found'),
+      api.get('/emergency'),
+    ]).then(([r, p, ar, lf, em]) => {
       setReports(r?.data || [])
       setPlaces(Array.isArray(p) ? p : [])
+      setMyAccReqs(Array.isArray(ar) ? ar : [])
+      setMyLost(Array.isArray(lf) ? lf : [])
+      setMyEmergencies(Array.isArray(em) ? em : [])
     }).catch(console.error)
   }, [])
 
@@ -211,21 +220,79 @@ export default function CitizenPage() {
 
           {tab === 'track' && (
             <div>
-              <h2 className="text-sm font-bold mb-3">پیگیری گزارش‌های من</h2>
-              {reports.length === 0 && <div className="text-center text-text-muted text-sm py-8">هیچ گزارشی ثبت نکرده‌اید</div>}
-              {reports.map((r: any) => {
-                const s = statusColors[r.status] || statusColors.PENDING
-                return (
-                  <div key={r.id} className="bg-bg-card border border-border rounded-2xl p-4 mb-3">
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <div className="text-sm font-bold leading-5">{r.title}</div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0" style={{ color: s.color, background: `${s.color}20` }}>{s.label}</span>
+              <h2 className="text-sm font-bold mb-3">پیگیری درخواست‌های من</h2>
+
+              {reports.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[11px] text-text-dim font-semibold mb-2 px-1">گزارش‌های شهری ({reports.length})</div>
+                  {reports.map((r: any) => {
+                    const s = statusColors[r.status] || statusColors.PENDING
+                    return (
+                      <div key={r.id} className="bg-bg-card border border-border rounded-2xl p-3.5 mb-2">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="text-xs font-bold leading-5">{r.title}</div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md flex-shrink-0" style={{ color: s.color, background: `${s.color}20` }}>{s.label}</span>
+                        </div>
+                        <div className="text-[11px] text-text-dim">{r.category} • {new Date(r.createdAt).toLocaleDateString('fa-IR')}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {myAccReqs.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[11px] text-text-dim font-semibold mb-2 px-1">درخواست‌های اسکان ({myAccReqs.length})</div>
+                  {myAccReqs.map((r: any) => {
+                    const colors: Record<string, string> = { PENDING: '#e0c14f', APPROVED: '#56c48a', REJECTED: '#e07a7a', COMPLETED: '#56708c' }
+                    const labels: Record<string, string> = { PENDING: 'در انتظار', APPROVED: 'تأیید شده', REJECTED: 'رد شده', COMPLETED: 'اتمام' }
+                    const c = colors[r.status] || '#e0c14f'
+                    return (
+                      <div key={r.id} className="bg-bg-card border border-border rounded-2xl p-3.5 mb-2">
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="text-xs font-bold">{r.place?.name || 'مکان اسکان'}</div>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ color: c, background: `${c}20` }}>{labels[r.status] || r.status}</span>
+                        </div>
+                        <div className="text-[11px] text-text-dim mt-1">{r.guestsCount} نفر • {r.nights} شب • {new Date(r.createdAt).toLocaleDateString('fa-IR')}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              )}
+
+              {myLost.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[11px] text-text-dim font-semibold mb-2 px-1">گمشدگان ثبت‌شده ({myLost.length})</div>
+                  {myLost.map((m: any) => (
+                    <div key={m.id} className="bg-bg-card border border-border rounded-2xl p-3.5 mb-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs font-bold">{m.name}</div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ color: m.status === 'FOUND' ? '#56c48a' : '#e07a7a', background: m.status === 'FOUND' ? '#56c48a20' : '#e07a7a20' }}>{m.status === 'FOUND' ? 'پیدا شده' : 'گمشده'}</span>
+                      </div>
+                      <div className="text-[11px] text-text-dim mt-1">{m.lastSeenLocation} • {new Date(m.createdAt).toLocaleDateString('fa-IR')}</div>
                     </div>
-                    <div className="text-xs text-text-muted mb-1">{r.category}</div>
-                    <div className="text-[11px] text-text-dim">{new Date(r.createdAt).toLocaleDateString('fa-IR')}</div>
-                  </div>
-                )
-              })}
+                  ))}
+                </div>
+              )}
+
+              {myEmergencies.length > 0 && (
+                <div className="mb-3">
+                  <div className="text-[11px] text-text-dim font-semibold mb-2 px-1">گزارش‌های اضطراری ({myEmergencies.length})</div>
+                  {myEmergencies.map((em: any) => (
+                    <div key={em.id} className="bg-bg-card border border-red/20 rounded-2xl p-3.5 mb-2">
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="text-xs font-bold text-red">{em.type}</div>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-md" style={{ color: em.status === 'RESOLVED' ? '#56c48a' : '#e07a7a', background: em.status === 'RESOLVED' ? '#56c48a20' : '#e07a7a20' }}>{em.status === 'RESOLVED' ? 'حل شده' : 'در پیگیری'}</span>
+                      </div>
+                      <div className="text-[11px] text-text-dim mt-1 leading-5">{em.description?.slice(0, 60)}{em.description?.length > 60 ? '...' : ''}</div>
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              {reports.length === 0 && myAccReqs.length === 0 && myLost.length === 0 && myEmergencies.length === 0 && (
+                <div className="text-center text-text-muted text-sm py-8">هیچ موردی ثبت نکرده‌اید</div>
+              )}
             </div>
           )}
         </div>

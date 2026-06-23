@@ -18,6 +18,8 @@ import { UploadsModule } from './modules/uploads/uploads.module'
 import { AuditModule } from './modules/audit/audit.module'
 import { SupportModule } from './modules/support/support.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
+import { InspectionLocationsModule } from './modules/inspection-locations/inspection-locations.module'
+import { SettingsModule } from './modules/settings/settings.module'
 import configuration from './config/configuration'
 import { validateConfig } from './config/config.validation'
 
@@ -50,6 +52,8 @@ import { validateConfig } from './config/config.validation'
     AuditModule,
     SupportModule,
     NotificationsModule,
+    InspectionLocationsModule,
+    SettingsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },

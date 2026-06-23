@@ -35,14 +35,14 @@ export default function InspectorPage() {
 
   async function loadData() {
     try {
-      const [q, cl, miss] = await Promise.all([
-        api.get('/inspections/queue'),
+      const [q, approvedRes, cl, miss] = await Promise.all([
+        api.get('/inspections?status=INSPECTOR_ASSIGNED&limit=50'),
+        api.get('/inspections?status=APPROVED&limit=50'),
         api.get('/checklists'),
         api.get('/lost-found'),
       ])
-      const all = Array.isArray(q) ? q : []
-      setQueue(all.filter((i: any) => !['APPROVED', 'REJECTED'].includes(i.status)))
-      setApproved(all.filter((i: any) => i.status === 'APPROVED'))
+      setQueue(q?.data || [])
+      setApproved(approvedRes?.data || [])
       if (cl && cl.length > 0) {
         const full = await api.get(`/checklists/${cl[0].id}`)
         setChecklist(full)
@@ -165,7 +165,7 @@ export default function InspectorPage() {
               <div className="flex items-center justify-between">
                 <div>
                   <div className="text-[11px] text-blue font-semibold">اپ بازرس میدانی</div>
-                  <div className="text-lg font-black mt-0.5">منطقه ۱۲ — بازرسی</div>
+                  <div className="text-lg font-black mt-0.5">{user.fullName}</div>
                 </div>
                 <button onClick={() => { logout(); router.push('/') }} className="w-9 h-9 rounded-full bg-white/[.06] flex items-center justify-center text-text-muted">×</button>
               </div>

@@ -28,6 +28,7 @@ export default function HQPage() {
   const [minScore, setMinScore] = useState(60)
   const [maxIssues, setMaxIssues] = useState(2)
   const [loading, setLoading] = useState(true)
+  const [savingCriteria, setSavingCriteria] = useState(false)
 
   useEffect(() => {
     if (!user) { router.replace('/'); return }
@@ -37,12 +38,30 @@ export default function HQPage() {
       api.get('/inspections/stats'),
       api.get('/dashboard/activity?limit=15'),
       api.get('/lost-found?status=MISSING'),
-    ]).then(([s, is, act, missing]) => {
+      api.get('/settings'),
+    ]).then(([s, is, act, missing, sv]) => {
       setStats(s); setInspectionStats(is)
       setActivity(Array.isArray(act) ? act : [])
       setMissingList(Array.isArray(missing) ? missing : [])
+      if (Array.isArray(sv)) {
+        const minS = sv.find((x: any) => x.key === 'min_score_threshold')
+        const maxI = sv.find((x: any) => x.key === 'max_issues_conditional')
+        if (minS) setMinScore(parseInt(minS.value) || 60)
+        if (maxI) setMaxIssues(parseInt(maxI.value) || 2)
+      }
     }).catch(console.error).finally(() => setLoading(false))
   }, [])
+
+  async function saveCriteria() {
+    setSavingCriteria(true)
+    try {
+      await Promise.all([
+        api.put('/settings/min_score_threshold', { value: String(minScore) }),
+        api.put('/settings/max_issues_conditional', { value: String(maxIssues) }),
+      ])
+    } catch (e: any) { alert(e.message) }
+    finally { setSavingCriteria(false) }
+  }
 
   function doLogout() { logout(); router.push('/') }
 
@@ -399,6 +418,11 @@ export default function HQPage() {
                   <div>• سایر موارد = <strong>مردود</strong></div>
                 </div>
               </div>
+              <button onClick={saveCriteria} disabled={savingCriteria}
+                className="w-full mt-4 py-2.5 rounded-xl font-bold text-sm transition-all disabled:opacity-50"
+                style={{ background: 'rgba(90,169,230,.15)', color: '#5aa9e6', border: '1px solid rgba(90,169,230,.3)' }}>
+                {savingCriteria ? 'در حال ذخیره...' : 'ذخیره معیارها'}
+              </button>
             </div>
 
             <div className="bg-bg-card border border-border rounded-2xl p-5">

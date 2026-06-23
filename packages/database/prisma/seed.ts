@@ -45,6 +45,9 @@ async function main() {
   await prisma.emergencyReport.deleteMany({})
   await prisma.lostFoundPerson.deleteMany({})
   await prisma.citizenReport.deleteMany({})
+  // Clear app access so role/appType changes in config take effect on re-seed
+  await prisma.userAppAccess.deleteMany({})
+  await prisma.userRole.deleteMany({})
   console.log('✅ Operational data cleared')
 
   // ─── 2. Permissions ───────────────────────────────────────────────────────
@@ -130,7 +133,7 @@ async function main() {
         'accommodation:create', 'accommodation:read', 'accommodation:update',
         'lost-found:create', 'lost-found:read', 'lost-found:update', 'regions:read',
       ],
-      appTypes: [AppType.DISTRICT],
+      appTypes: [AppType.ACCOMMODATION],
     },
     {
       name: 'SUPPORT', displayName: 'پشتیبانی سیستم',
@@ -234,7 +237,7 @@ async function main() {
   const usersConfig = [
     { id_key: 'admin',   email: 'admin@payesh.ir',         fullName: 'مدیر کل سیستم',         role: 'SUPER_ADMIN',           appTypes: [AppType.ADMIN, AppType.HQ, AppType.SUPPORT] },
     { id_key: 'hq',      email: 'hq@payesh.ir',            fullName: 'مسئول ستاد مرکزی',       role: 'HQ_MANAGER',            appTypes: [AppType.HQ] },
-    { id_key: 'cmd',     email: 'commander@payesh.ir',     fullName: 'مسئول قرارگاه منطقه ۱۲', role: 'COMMANDER',             appTypes: [AppType.DISTRICT] },
+    { id_key: 'cmd',     email: 'commander@payesh.ir',     fullName: 'مسئول قرارگاه منطقه ۱۲', role: 'COMMANDER',             appTypes: [AppType.COMMANDER] },
     { id_key: 'ins',     email: 'inspector@payesh.ir',     fullName: 'بازرس میدانی — احمدی',   role: 'INSPECTOR',             appTypes: [AppType.INSPECTOR] },
     { id_key: 'ins2',    email: 'inspector2@payesh.ir',    fullName: 'بازرس میدانی — رضایی',   role: 'INSPECTOR',             appTypes: [AppType.INSPECTOR] },
     { id_key: 'dist',    email: 'district@payesh.ir',      fullName: 'مسئول ناحیه ۱',          role: 'DISTRICT_MANAGER',      appTypes: [AppType.DISTRICT] },
@@ -242,7 +245,7 @@ async function main() {
     { id_key: 'cit2',    email: 'citizen2@payesh.ir',      fullName: 'فاطمه کریمی',            role: 'CITIZEN',               appTypes: [AppType.CITIZEN] },
     { id_key: 'cit3',    email: 'citizen3@payesh.ir',      fullName: 'حسین رحیمی',             role: 'CITIZEN',               appTypes: [AppType.CITIZEN] },
     { id_key: 'sup',     email: 'support@payesh.ir',       fullName: 'کارشناس پشتیبانی',        role: 'SUPPORT',               appTypes: [AppType.SUPPORT] },
-    { id_key: 'accom',   email: 'accommodation@payesh.ir', fullName: 'مسئول اسکان منطقه ۱۲',  role: 'ACCOMMODATION_MANAGER', appTypes: [AppType.DISTRICT] },
+    { id_key: 'accom',   email: 'accommodation@payesh.ir', fullName: 'مسئول اسکان منطقه ۱۲',  role: 'ACCOMMODATION_MANAGER', appTypes: [AppType.ACCOMMODATION] },
   ]
 
   const U: Record<string, string> = {}
@@ -431,7 +434,7 @@ async function main() {
   const places = [
     { id: 'place-01', name: 'مدرسه شهید بهشتی',       address: 'خیابان امیرآباد، کوچه ۳',         regionId: rids[5],  capacity: 200, currentOccupancy: 120, contactPhone: '021-88001234' },
     { id: 'place-02', name: 'سالن ورزشی آزادی',        address: 'مجموعه ورزشی آزادی',               regionId: rids[10], capacity: 500, currentOccupancy: 340, contactPhone: '021-66001122' },
-    { id: 'place-03', name: 'مسجد امام رضا(ع)',         address: 'میدان شهدا — کوچه حسنی',          regionId: rids[11], capacity: 150, currentOccupancy: 80,  contactPhone: '021-55001500' },
+    { id: 'place-03', name: 'مسجد امام رضا(ع)',         address: 'میدان شهدا — کوچه حسنی',          regionId: rids[11], capacity: 150, currentOccupancy: 80,  contactPhone: '021-55001500', managerId: U.accom, lat: 35.679, lng: 51.423 },
     { id: 'place-04', name: 'حسینیه اعظم منطقه ۱۱',   address: 'خیابان رستمی — کوچه ۱۵',         regionId: rids[10], capacity: 300, currentOccupancy: 0,   contactPhone: '021-55882200' },
     { id: 'place-05', name: 'مدرسه ابوریحان',           address: 'خیابان پیروزی — نبش ارمغان',      regionId: rids[14], capacity: 180, currentOccupancy: 45,  contactPhone: '021-77113344' },
   ]
@@ -599,7 +602,7 @@ async function main() {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
   admin@payesh.ir         → SUPER_ADMIN       → /admin + /hq + /support
   hq@payesh.ir            → HQ_MANAGER        → /hq
-  commander@payesh.ir     → COMMANDER         → /district
+  commander@payesh.ir     → COMMANDER         → /commander
   inspector@payesh.ir     → INSPECTOR         → /inspector
   inspector2@payesh.ir    → INSPECTOR         → /inspector
   district@payesh.ir      → DISTRICT_MANAGER  → /district
@@ -607,7 +610,7 @@ async function main() {
   citizen2@payesh.ir      → CITIZEN           → /citizen
   citizen3@payesh.ir      → CITIZEN           → /citizen
   support@payesh.ir       → SUPPORT           → /support
-  accommodation@payesh.ir → ACCOMMODATION_MGR → /district
+  accommodation@payesh.ir → ACCOMMODATION_MGR → /accommodation (مسجد امام رضا)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `)
 }

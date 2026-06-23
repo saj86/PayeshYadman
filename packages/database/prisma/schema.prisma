@@ -17,6 +17,7 @@ enum AppType {
   ADMIN
   DISTRICT
   COMMANDER
+  ACCOMMODATION
 }
 
 enum RegionLevel {
@@ -138,6 +139,7 @@ model User {
   assignedCitizenReports  CitizenReport[]   @relation("AssignedTo")
 
   accommodationRequests AccommodationRequest[] @relation("Requester")
+  managedPlace          AccommodationPlace?    @relation("PlaceManager")
 
   lostFoundReports LostFoundPerson[] @relation("ReportedBy")
 
@@ -375,12 +377,17 @@ model AccommodationPlace {
   currentOccupancy Int     @default(0)
   contactPhone     String?
   isActive         Boolean @default(true)
+  managerId        String? @unique
+  lat              Float?
+  lng              Float?
 
   region   Region                 @relation(fields: [regionId], references: [id])
+  manager  User?                  @relation("PlaceManager", fields: [managerId], references: [id])
   requests AccommodationRequest[]
 
   @@index([regionId])
   @@index([isActive])
+  @@index([managerId])
 }
 
 model AccommodationRequest {

@@ -10,18 +10,20 @@ export interface User {
   appAccess: string[]
 }
 
-export type AppArea = 'HQ' | 'INSPECTOR' | 'CITIZEN' | 'SUPPORT' | 'DISTRICT' | 'ADMIN'
+export type AppArea = 'HQ' | 'INSPECTOR' | 'CITIZEN' | 'SUPPORT' | 'DISTRICT' | 'ADMIN' | 'COMMANDER' | 'ACCOMMODATION'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 // Which users may enter which app area
 const ACCESS_RULES: Record<AppArea, (u: User) => boolean> = {
-  ADMIN:     u => u.roles.includes('SUPER_ADMIN'),
-  HQ:        u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('HQ'),
-  INSPECTOR: u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('INSPECTOR'),
-  CITIZEN:   u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('CITIZEN'),
-  SUPPORT:   u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('SUPPORT'),
-  DISTRICT:  u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('DISTRICT'),
+  ADMIN:         u => u.roles.includes('SUPER_ADMIN'),
+  HQ:            u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('HQ'),
+  INSPECTOR:     u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('INSPECTOR'),
+  CITIZEN:       u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('CITIZEN'),
+  SUPPORT:       u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('SUPPORT'),
+  DISTRICT:      u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('DISTRICT'),
+  COMMANDER:     u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('COMMANDER'),
+  ACCOMMODATION: u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('ACCOMMODATION'),
 }
 
 export function canAccess(user: User, area: AppArea): boolean {
@@ -69,11 +71,13 @@ export async function fetchMe(): Promise<User> {
 
 export function getRedirectPath(user: User): string {
   const { appAccess, roles } = user
-  if (roles.includes('SUPER_ADMIN'))      return '/admin'
-  if (appAccess.includes('HQ'))           return '/hq'
-  if (appAccess.includes('INSPECTOR'))    return '/inspector'
-  if (appAccess.includes('SUPPORT'))      return '/support'
-  if (appAccess.includes('DISTRICT'))     return '/district'
-  if (appAccess.includes('CITIZEN'))      return '/citizen'
+  if (roles.includes('SUPER_ADMIN'))           return '/admin'
+  if (appAccess.includes('HQ'))                return '/hq'
+  if (appAccess.includes('INSPECTOR'))         return '/inspector'
+  if (appAccess.includes('SUPPORT'))           return '/support'
+  if (appAccess.includes('COMMANDER'))         return '/commander'
+  if (appAccess.includes('ACCOMMODATION'))     return '/accommodation'
+  if (appAccess.includes('DISTRICT'))          return '/district'
+  if (appAccess.includes('CITIZEN'))           return '/citizen'
   return '/'
 }
