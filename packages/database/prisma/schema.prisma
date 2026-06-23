@@ -1,0 +1,567 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ──────────────────────────────────────────────────────────────────
+
+enum AppType {
+  HQ
+  INSPECTOR
+  CITIZEN
+  SUPPORT
+  ADMIN
+  DISTRICT
+  COMMANDER
+}
+
+enum RegionLevel {
+  CITY
+  REGION
+  DISTRICT
+  ZONE
+}
+
+enum InspectionStatus {
+  PENDING
+  COMMANDER_REVIEW
+  INSPECTOR_ASSIGNED
+  APPROVED
+  CONDITIONAL
+  REJECTED
+  REVISIT
+}
+
+enum ReviewAction {
+  APPROVE
+  REJECT
+  REVISIT
+  CONDITIONAL
+}
+
+enum CitizenReportStatus {
+  PENDING
+  ASSIGNED
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum CitizenReportPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AccommodationRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  CANCELLED
+  COMPLETED
+}
+
+enum LostFoundStatus {
+  MISSING
+  FOUND
+  CLOSED
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum EmergencyStatus {
+  PENDING
+  DISPATCHED
+  ON_SCENE
+  RESOLVED
+  CANCELLED
+}
+
+enum EmergencyPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum AssignmentStatus {
+  PENDING
+  ACCEPTED
+  IN_PROGRESS
+  COMPLETED
+  REJECTED
+}
+
+enum SupportTicketStatus {
+  OPEN
+  IN_PROGRESS
+  RESOLVED
+  CLOSED
+}
+
+enum SupportTicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ─── Models ─────────────────────────────────────────────────────────────────
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  phone        String?  @unique
+  passwordHash String
+  fullName     String
+  avatarUrl    String?
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  userRoles     UserRole[]
+  userAppAccess UserAppAccess[]
+
+  submittedInspections InspectionSubmission[] @relation("SubmittedBy")
+  inspectionReviews    InspectionReview[]     @relation("Reviewer")
+
+  citizenReports          CitizenReport[]   @relation("Reporter")
+  assignedCitizenReports  CitizenReport[]   @relation("AssignedTo")
+
+  accommodationRequests AccommodationRequest[] @relation("Requester")
+
+  lostFoundReports LostFoundPerson[] @relation("ReportedBy")
+
+  emergencyReports        EmergencyReport[] @relation("EmergencyReporter")
+  assignedEmergencies     EmergencyReport[] @relation("EmergencyAssignedTo")
+
+  assignments       Assignment[] @relation("AssignedTo")
+  createdAssignments Assignment[] @relation("AssignedBy")
+
+  comments    Comment[]
+  attachments Attachment[]
+  auditLogs   AuditLog[]
+
+  supportTickets         SupportTicket[] @relation("TicketReporter")
+  assignedSupportTickets SupportTicket[] @relation("TicketAssignedTo")
+
+  notificationEvents NotificationEvent[]
+  systemSettings     SystemSetting[]     @relation("UpdatedBy")
+
+  regionManaged Region? @relation("RegionManager")
+
+  @@index([email])
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model Role {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  displayName String
+  description String?
+
+  userRoles       UserRole[]
+  rolePermissions RolePermission[]
+
+  @@index([name])
+}
+
+model Permission {
+  id          String  @id @default(cuid())
+  name        String  @unique
+  displayName String
+  resource    String
+  action      String
+
+  rolePermissions RolePermission[]
+
+  @@index([resource, action])
+}
+
+model UserRole {
+  userId String
+  roleId String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+  @@index([userId])
+  @@index([roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([roleId])
+}
+
+model UserAppAccess {
+  id       String  @id @default(cuid())
+  userId   String
+  appType  AppType
+  isActive Boolean @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, appType])
+  @@index([userId])
+  @@index([appType])
+}
+
+model Region {
+  id       String      @id @default(cuid())
+  name     String
+  code     String      @unique
+  parentId String?
+  level    RegionLevel
+  managerId String?    @unique
+
+  parent   Region?  @relation("RegionParent", fields: [parentId], references: [id])
+  children Region[] @relation("RegionParent")
+  manager  User?    @relation("RegionManager", fields: [managerId], references: [id])
+
+  inspectionLocations InspectionLocation[]
+  accommodationPlaces AccommodationPlace[]
+
+  @@index([parentId])
+  @@index([level])
+  @@index([code])
+}
+
+model InspectionLocation {
+  id       String  @id @default(cuid())
+  regionId String
+  name     String
+  address  String
+  lat      Float?
+  lng      Float?
+  category String
+
+  region      Region                 @relation(fields: [regionId], references: [id])
+  submissions InspectionSubmission[]
+
+  @@index([regionId])
+  @@index([category])
+}
+
+model InspectionSubmission {
+  id            String           @id @default(cuid())
+  locationId    String
+  submittedById String
+  status        InspectionStatus @default(PENDING)
+  score         Float?
+  notes         String?
+  createdAt     DateTime         @default(now())
+  updatedAt     DateTime         @updatedAt
+
+  location    InspectionLocation @relation(fields: [locationId], references: [id])
+  submittedBy User               @relation("SubmittedBy", fields: [submittedById], references: [id])
+
+  reviews           InspectionReview[]
+  checklistResponses ChecklistResponse[]
+  assignments       Assignment[]
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([submittedById])
+  @@index([locationId])
+}
+
+model InspectionReview {
+  id           String       @id @default(cuid())
+  submissionId String
+  reviewerId   String
+  action       ReviewAction
+  notes        String?
+  score        Float?
+  createdAt    DateTime     @default(now())
+
+  submission InspectionSubmission @relation(fields: [submissionId], references: [id])
+  reviewer   User                 @relation("Reviewer", fields: [reviewerId], references: [id])
+
+  @@index([submissionId])
+  @@index([reviewerId])
+  @@index([createdAt])
+}
+
+model Checklist {
+  id       String  @id @default(cuid())
+  name     String
+  version  Int     @default(1)
+  isActive Boolean @default(true)
+
+  items ChecklistItem[]
+
+  @@index([isActive])
+}
+
+model ChecklistItem {
+  id          String  @id @default(cuid())
+  checklistId String
+  order       Int
+  label       String
+  category    String
+  isMandatory Boolean @default(false)
+  weight      Float   @default(1.0)
+
+  checklist  Checklist          @relation(fields: [checklistId], references: [id])
+  responses  ChecklistResponse[]
+
+  @@index([checklistId])
+  @@index([category])
+}
+
+model ChecklistResponse {
+  id              String  @id @default(cuid())
+  submissionId    String
+  checklistItemId String
+  passed          Boolean
+  notes           String?
+
+  submission    InspectionSubmission @relation(fields: [submissionId], references: [id])
+  checklistItem ChecklistItem        @relation(fields: [checklistItemId], references: [id])
+
+  @@unique([submissionId, checklistItemId])
+  @@index([submissionId])
+}
+
+model CitizenReport {
+  id           String                @id @default(cuid())
+  reporterId   String
+  category     String
+  title        String
+  description  String
+  lat          Float?
+  lng          Float?
+  address      String?
+  status       CitizenReportStatus   @default(PENDING)
+  priority     CitizenReportPriority @default(MEDIUM)
+  assignedToId String?
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  reporter   User  @relation("Reporter", fields: [reporterId], references: [id])
+  assignedTo User? @relation("AssignedTo", fields: [assignedToId], references: [id])
+
+  @@index([status])
+  @@index([priority])
+  @@index([reporterId])
+  @@index([createdAt])
+  @@index([category])
+}
+
+model AccommodationPlace {
+  id               String  @id @default(cuid())
+  name             String
+  address          String
+  regionId         String
+  capacity         Int
+  currentOccupancy Int     @default(0)
+  contactPhone     String?
+  isActive         Boolean @default(true)
+
+  region   Region                 @relation(fields: [regionId], references: [id])
+  requests AccommodationRequest[]
+
+  @@index([regionId])
+  @@index([isActive])
+}
+
+model AccommodationRequest {
+  id          String                     @id @default(cuid())
+  requesterId String
+  placeId     String
+  guestsCount Int
+  nights      Int
+  status      AccommodationRequestStatus @default(PENDING)
+  notes       String?
+  createdAt   DateTime                   @default(now())
+
+  requester User               @relation("Requester", fields: [requesterId], references: [id])
+  place     AccommodationPlace @relation(fields: [placeId], references: [id])
+
+  @@index([requesterId])
+  @@index([placeId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model LostFoundPerson {
+  id               String          @id @default(cuid())
+  reportedById     String
+  name             String
+  age              Int?
+  gender           Gender?
+  description      String
+  lastSeenLocation String
+  lastSeenAt       DateTime
+  status           LostFoundStatus @default(MISSING)
+  contactPhone     String?
+  createdAt        DateTime        @default(now())
+  updatedAt        DateTime        @updatedAt
+
+  reportedBy User @relation("ReportedBy", fields: [reportedById], references: [id])
+
+  @@index([status])
+  @@index([createdAt])
+  @@index([reportedById])
+}
+
+model EmergencyReport {
+  id           String            @id @default(cuid())
+  reporterId   String
+  type         String
+  description  String
+  lat          Float?
+  lng          Float?
+  status       EmergencyStatus   @default(PENDING)
+  priority     EmergencyPriority @default(HIGH)
+  assignedToId String?
+  createdAt    DateTime          @default(now())
+
+  reporter   User  @relation("EmergencyReporter", fields: [reporterId], references: [id])
+  assignedTo User? @relation("EmergencyAssignedTo", fields: [assignedToId], references: [id])
+
+  @@index([status])
+  @@index([priority])
+  @@index([createdAt])
+}
+
+model Assignment {
+  id                    String           @id @default(cuid())
+  inspectionSubmissionId String
+  assignedToId          String
+  assignedById          String
+  status                AssignmentStatus @default(PENDING)
+  dueAt                 DateTime?
+  createdAt             DateTime         @default(now())
+
+  inspectionSubmission InspectionSubmission @relation(fields: [inspectionSubmissionId], references: [id])
+  assignedTo           User                 @relation("AssignedTo", fields: [assignedToId], references: [id])
+  assignedBy           User                 @relation("AssignedBy", fields: [assignedById], references: [id])
+
+  @@index([inspectionSubmissionId])
+  @@index([assignedToId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model Comment {
+  id         String   @id @default(cuid())
+  entityType String
+  entityId   String
+  authorId   String
+  body       String
+  createdAt  DateTime @default(now())
+
+  author User @relation(fields: [authorId], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([authorId])
+  @@index([createdAt])
+}
+
+model Attachment {
+  id           String   @id @default(cuid())
+  entityType   String
+  entityId     String
+  uploadedById String
+  fileName     String
+  mimeType     String
+  size         Int
+  path         String
+  createdAt    DateTime @default(now())
+
+  uploadedBy User @relation(fields: [uploadedById], references: [id])
+
+  @@index([entityType, entityId])
+  @@index([uploadedById])
+  @@index([createdAt])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  userId     String?
+  action     String
+  entityType String
+  entityId   String?
+  oldValue   Json?
+  newValue   Json?
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  user User? @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([entityType, entityId])
+  @@index([createdAt])
+  @@index([action])
+}
+
+model SupportTicket {
+  id           String                @id @default(cuid())
+  reportedById String
+  category     String
+  title        String
+  description  String
+  status       SupportTicketStatus   @default(OPEN)
+  assignedToId String?
+  priority     SupportTicketPriority @default(MEDIUM)
+  createdAt    DateTime              @default(now())
+  updatedAt    DateTime              @updatedAt
+
+  reportedBy User  @relation("TicketReporter", fields: [reportedById], references: [id])
+  assignedTo User? @relation("TicketAssignedTo", fields: [assignedToId], references: [id])
+
+  @@index([status])
+  @@index([priority])
+  @@index([reportedById])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  id          String   @id @default(cuid())
+  key         String   @unique
+  value       String
+  description String?
+  updatedById String?
+  updatedAt   DateTime @updatedAt
+
+  updatedBy User? @relation("UpdatedBy", fields: [updatedById], references: [id])
+
+  @@index([key])
+}
+
+model NotificationEvent {
+  id        String    @id @default(cuid())
+  userId    String
+  type      String
+  title     String
+  body      String
+  data      Json?
+  readAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@index([userId])
+  @@index([readAt])
+  @@index([createdAt])
+  @@index([type])
+}

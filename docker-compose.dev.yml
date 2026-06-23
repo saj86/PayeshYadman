@@ -1,0 +1,31 @@
+version: '3.8'
+
+# Local development override — only runs infrastructure, not apps
+# Usage: docker compose -f docker-compose.dev.yml up -d
+services:
+  postgres:
+    image: postgis/postgis:16-3.4
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-payeshyadman}
+      POSTGRES_USER: ${POSTGRES_USER:-payesh}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-payesh123}
+    ports:
+      - '${POSTGRES_PORT:-5432}:5432'
+    volumes:
+      - pgdata_dev:/var/lib/postgresql/data
+    healthcheck:
+      test: ['CMD-SHELL', 'pg_isready -U ${POSTGRES_USER:-payesh} -d ${POSTGRES_DB:-payeshyadman}']
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - '${REDIS_PORT:-6379}:6379'
+    volumes:
+      - redisdata_dev:/data
+
+volumes:
+  pgdata_dev:
+  redisdata_dev:

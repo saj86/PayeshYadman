@@ -1,0 +1,44 @@
+{
+  "name": "payeshyadman",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "turbo run dev",
+    "dev:api": "turbo run dev --filter=@payeshyadman/api",
+    "dev:web": "turbo run dev --filter=@payeshyadman/web",
+    "build": "turbo run build",
+    "build:api": "turbo run build --filter=@payeshyadman/api",
+    "build:web": "turbo run build --filter=@payeshyadman/web",
+    "lint": "turbo run lint",
+    "test": "turbo run test",
+
+    "db:generate": "cd packages/database && pnpm db:generate",
+    "db:push": "cd packages/database && pnpm db:push",
+    "db:migrate": "cd packages/database && npx prisma migrate dev --schema prisma/schema.prisma",
+    "db:migrate:name": "cd packages/database && npx prisma migrate dev --name",
+    "db:deploy": "cd packages/database && npx prisma migrate deploy --schema prisma/schema.prisma",
+    "db:seed": "cd packages/database && pnpm db:seed",
+    "db:reset": "cd packages/database && npx prisma migrate reset --force --schema prisma/schema.prisma && pnpm db:seed",
+    "db:studio": "cd packages/database && pnpm db:studio",
+    "db:status": "cd packages/database && npx prisma migrate status --schema prisma/schema.prisma",
+
+    "infra:up": "docker compose -f docker-compose.dev.yml up -d",
+    "infra:down": "docker compose -f docker-compose.dev.yml down",
+    "docker:build": "bash scripts/linux/docker-build.sh",
+    "docker:build:api": "bash scripts/linux/docker-build.sh api",
+    "docker:build:web": "bash scripts/linux/docker-build.sh web",
+    "docker:up": "docker compose up -d",
+    "docker:down": "docker compose down",
+    "docker:restart": "docker compose down && docker compose up -d",
+    "docker:logs": "docker compose logs -f",
+    "docker:ps": "docker compose ps",
+
+    "setup": "bash scripts/linux/setup.sh",
+    "postinstall": "cd packages/database && pnpm db:generate || true"
+  },
+  "devDependencies": {
+    "turbo": "^2.0.0",
+    "typescript": "^5.4.0"
+  },
+  "packageManager": "pnpm@9.0.0"
+}

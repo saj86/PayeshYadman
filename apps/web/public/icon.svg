@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+  <rect width="512" height="512" rx="96" fill="#070d15"/>
+  <rect x="40" y="40" width="432" height="432" rx="72" fill="#0d1929"/>
+  <!-- Building / municipality icon -->
+  <rect x="156" y="280" width="200" height="140" fill="#c2a35a" opacity="0.9"/>
+  <rect x="176" y="300" width="50" height="50" fill="#070d15" rx="4"/>
+  <rect x="286" y="300" width="50" height="50" fill="#070d15" rx="4"/>
+  <rect x="216" y="340" width="80" height="80" fill="#070d15" rx="4"/>
+  <!-- Roof / triangle -->
+  <polygon points="136,280 256,160 376,280" fill="#c2a35a"/>
+  <!-- Flagpole -->
+  <rect x="248" y="92" width="8" height="76" fill="#c2a35a"/>
+  <!-- Flag -->
+  <rect x="256" y="92" width="48" height="30" fill="#56c48a" rx="3"/>
+  <!-- Checkmark in flag -->
+  <polyline points="264,107 272,115 284,100" stroke="#070d15" stroke-width="4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+</svg>
