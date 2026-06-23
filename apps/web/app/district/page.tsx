@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getStoredUser, logout } from '@/lib/auth'
+import { getStoredUser, logout, canAccess, getRedirectPath } from '@/lib/auth'
 import api from '@/lib/api'
 
 export default function DistrictPage() {
@@ -15,7 +15,8 @@ export default function DistrictPage() {
   const [submitted, setSubmitted] = useState(false)
 
   useEffect(() => {
-    if (!user) { router.push('/'); return }
+    if (!user) { router.replace('/'); return }
+    if (!canAccess(user, 'DISTRICT')) { router.replace(getRedirectPath(user)); return }
     Promise.all([
       api.get('/inspections?limit=20'),
       api.get('/checklists'),

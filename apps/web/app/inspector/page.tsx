@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getStoredUser, logout } from '@/lib/auth'
+import { getStoredUser, logout, canAccess, getRedirectPath } from '@/lib/auth'
 import api from '@/lib/api'
 
 const TABS = [
@@ -28,7 +28,8 @@ export default function InspectorPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) { router.push('/'); return }
+    if (!user) { router.replace('/'); return }
+    if (!canAccess(user, 'INSPECTOR')) { router.replace(getRedirectPath(user)); return }
     loadData()
   }, [])
 

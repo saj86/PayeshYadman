@@ -1,17 +1,27 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common'
+import { Injectable, NotFoundException, ForbiddenException, Logger } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
 import { InspectionStatus, ReviewAction } from '@prisma/client'
 
+const HQ_ROLES = ['SUPER_ADMIN', 'HQ_MANAGER', 'COMMANDER', 'DISTRICT_MANAGER']
+
 @Injectable()
 export class InspectionsService {
+  private readonly logger = new Logger(InspectionsService.name)
+
   constructor(private prisma: PrismaService) {}
 
-  async findAll(page = 1, limit = 20, status?: InspectionStatus, regionId?: string, search?: string) {
+  async findAll(callerId: string, callerRoles: string[], page = 1, limit = 20, status?: InspectionStatus, regionId?: string, search?: string) {
     const skip = (page - 1) * limit
     const where: any = {}
     if (status) where.status = status
     if (regionId) where.location = { regionId }
     if (search) where.location = { ...where.location, name: { contains: search, mode: 'insensitive' } }
+
+    // Inspectors only see submissions assigned to them
+    const isHQ = callerRoles.some(r => HQ_ROLES.includes(r))
+    if (!isHQ && callerRoles.includes('INSPECTOR')) {
+      where.assignments = { some: { assignedToId: callerId } }
+    }
 
     const [data, total] = await Promise.all([
       this.prisma.inspectionSubmission.findMany({
@@ -33,7 +43,7 @@ export class InspectionsService {
     return { data, total, page, limit, totalPages: Math.ceil(total / limit) }
   }
 
-  async findOne(id: string) {
+  async findOne(id: string, callerId: string, callerRoles: string[]) {
     const submission = await this.prisma.inspectionSubmission.findUnique({
       where: { id },
       include: {
@@ -48,6 +58,16 @@ export class InspectionsService {
       },
     })
     if (!submission) throw new NotFoundException('رکورد یافت نشد')
+
+    const isHQ = callerRoles.some(r => HQ_ROLES.includes(r))
+    if (!isHQ && callerRoles.includes('INSPECTOR')) {
+      const isAssigned = (submission.assignments as any[]).some(a => a.assignedToId === callerId)
+      if (!isAssigned) {
+        this.logger.warn(`Inspector ${callerId} attempted to access unassigned submission ${id}`)
+        throw new ForbiddenException('این رکورد به شما ارجاع داده نشده است')
+      }
+    }
+
     return submission
   }
 
@@ -63,16 +83,16 @@ export class InspectionsService {
     })
   }
 
-  async updateStatus(id: string, status: InspectionStatus, userId: string) {
-    await this.findOne(id)
+  async updateStatus(id: string, status: InspectionStatus, callerId: string, callerRoles: string[]) {
+    await this.findOne(id, callerId, callerRoles)
     return this.prisma.inspectionSubmission.update({
       where: { id },
       data: { status },
     })
   }
 
-  async review(submissionId: string, reviewerId: string, action: ReviewAction, notes?: string, score?: number, checklistResponses?: any[]) {
-    const submission = await this.findOne(submissionId)
+  async review(submissionId: string, reviewerId: string, reviewerRoles: string[], action: ReviewAction, notes?: string, score?: number, checklistResponses?: any[]) {
+    await this.findOne(submissionId, reviewerId, reviewerRoles)
 
     const statusMap: Record<ReviewAction, InspectionStatus> = {
       APPROVE: InspectionStatus.APPROVED,

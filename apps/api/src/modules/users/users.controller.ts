@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Delete, Patch, Body, Param, Query, UseGuards } from '@nestjs/common'
+import { Controller, Get, Post, Put, Delete, Patch, Body, Param, Query, UseGuards, Request } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger'
 import { UsersService } from './users.service'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
@@ -14,7 +14,7 @@ export class UsersController {
 
   @Get()
   @Roles('SUPER_ADMIN', 'SUPPORT', 'HQ_MANAGER')
-  findAll(
+  findAll(@Request() req: any,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
@@ -25,13 +25,14 @@ export class UsersController {
       limit ? parseInt(limit) : 20,
       search,
       role,
+      req.user.roles,
     )
   }
 
   @Get(':id')
   @Roles('SUPER_ADMIN', 'SUPPORT', 'HQ_MANAGER')
-  findOne(@Param('id') id: string) {
-    return this.usersService.findOne(id)
+  findOne(@Request() req: any, @Param('id') id: string) {
+    return this.usersService.findOne(id, req.user.roles)
   }
 
   @Post()
@@ -42,14 +43,14 @@ export class UsersController {
 
   @Put(':id')
   @Roles('SUPER_ADMIN', 'SUPPORT')
-  update(@Param('id') id: string, @Body() body: any) {
-    return this.usersService.update(id, body)
+  update(@Request() req: any, @Param('id') id: string, @Body() body: any) {
+    return this.usersService.update(id, body, req.user.roles)
   }
 
   @Patch(':id/reset-password')
   @Roles('SUPER_ADMIN', 'SUPPORT')
-  resetPassword(@Param('id') id: string, @Body() body: { password: string }) {
-    return this.usersService.resetPassword(id, body.password)
+  resetPassword(@Request() req: any, @Param('id') id: string, @Body() body: { password: string }) {
+    return this.usersService.resetPassword(id, body.password, req.user.roles)
   }
 
   @Delete(':id')

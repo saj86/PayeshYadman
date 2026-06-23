@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getStoredUser, logout } from '@/lib/auth'
+import { getStoredUser, logout, canAccess, getRedirectPath } from '@/lib/auth'
 import api from '@/lib/api'
 import dynamic from 'next/dynamic'
 
@@ -30,7 +30,8 @@ export default function HQPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) { router.push('/'); return }
+    if (!user) { router.replace('/'); return }
+    if (!canAccess(user, 'HQ')) { router.replace(getRedirectPath(user)); return }
     Promise.all([
       api.get('/dashboard/hq'),
       api.get('/inspections/stats'),

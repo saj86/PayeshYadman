@@ -11,9 +11,23 @@ import { LostFoundStatus } from '@prisma/client'
 export class LostFoundController {
   constructor(private service: LostFoundService) {}
 
-  @Get() findAll(@Query('status') status?: LostFoundStatus) { return this.service.findAll(status) }
-  @Post() create(@Body() body: any, @Request() req: any) { return this.service.create(body, req.user.sub) }
-  @Put(':id/status') updateStatus(@Param('id') id: string, @Body() body: { status: LostFoundStatus }) {
-    return this.service.updateStatus(id, body.status)
+  @Get()
+  findAll(@Request() req: any, @Query('status') status?: LostFoundStatus) {
+    return this.service.findAll(req.user.sub, req.user.roles, status)
+  }
+
+  @Get(':id')
+  findOne(@Param('id') id: string, @Request() req: any) {
+    return this.service.findOne(id, req.user.sub, req.user.roles)
+  }
+
+  @Post()
+  create(@Body() body: any, @Request() req: any) {
+    return this.service.create(body, req.user.sub)
+  }
+
+  @Put(':id/status')
+  updateStatus(@Param('id') id: string, @Body() body: { status: LostFoundStatus }, @Request() req: any) {
+    return this.service.updateStatus(id, body.status, req.user.sub, req.user.roles)
   }
 }

@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getStoredUser, logout } from '@/lib/auth'
+import { getStoredUser, logout, canAccess, getRedirectPath } from '@/lib/auth'
 import api from '@/lib/api'
 
 const TABS = ['داشبورد', 'نقش‌ها', 'مناطق', 'تنظیمات', 'کاربران']
@@ -17,11 +17,8 @@ export default function AdminPage() {
   const [newUser, setNewUser] = useState({ email: '', fullName: '', password: 'Admin1234', roleNames: 'CITIZEN', appTypes: 'CITIZEN' })
 
   useEffect(() => {
-    if (!user) { router.push('/'); return }
-    if (!user.roles.includes('SUPER_ADMIN') && !user.roles.includes('HQ_MANAGER')) {
-      router.push('/hq')
-      return
-    }
+    if (!user) { router.replace('/'); return }
+    if (!canAccess(user, 'ADMIN')) { router.replace(getRedirectPath(user)); return }
     loadAll()
   }, [])
 

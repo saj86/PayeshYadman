@@ -1,13 +1,21 @@
-import { Injectable } from '@nestjs/common'
+import { Injectable, ForbiddenException, Logger } from '@nestjs/common'
 import { PrismaService } from '../../prisma/prisma.service'
+
+const SUPPORT_ROLES = ['SUPER_ADMIN', 'SUPPORT', 'HQ_MANAGER']
 
 @Injectable()
 export class SupportService {
+  private readonly logger = new Logger(SupportService.name)
+
   constructor(private prisma: PrismaService) {}
 
-  async findAll(page = 1, limit = 20, status?: string) {
+  async findAll(callerId: string, callerRoles: string[], page = 1, limit = 20, status?: string) {
+    const isAdmin = callerRoles.some(r => SUPPORT_ROLES.includes(r))
     const skip = (page - 1) * limit
-    const where: any = status ? { status } : {}
+    const where: any = {}
+    if (status) where.status = status
+    if (!isAdmin) where.reportedById = callerId
+
     const [data, total] = await Promise.all([
       this.prisma.supportTicket.findMany({
         where, skip, take: limit,
@@ -26,7 +34,12 @@ export class SupportService {
     return this.prisma.supportTicket.create({ data: { ...data, reportedById } })
   }
 
-  async updateStatus(id: string, status: string, assignedToId?: string) {
+  async updateStatus(id: string, status: string, callerId: string, callerRoles: string[], assignedToId?: string) {
+    const isAdmin = callerRoles.some(r => SUPPORT_ROLES.includes(r))
+    if (!isAdmin) {
+      this.logger.warn(`User ${callerId} attempted to update support ticket status without admin role`)
+      throw new ForbiddenException('تنها پشتیبانی می‌تواند وضعیت تیکت را تغییر دهد')
+    }
     return this.prisma.supportTicket.update({ where: { id }, data: { status: status as any, assignedToId } })
   }
 

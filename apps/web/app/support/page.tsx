@@ -1,7 +1,7 @@
 'use client'
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { getStoredUser, logout } from '@/lib/auth'
+import { getStoredUser, logout, canAccess, getRedirectPath } from '@/lib/auth'
 import api from '@/lib/api'
 
 const TABS = ['کاربران', 'تیکت‌ها', 'سلامت سیستم', 'لاگ‌ها']
@@ -18,7 +18,8 @@ export default function SupportPage() {
   const [loading, setLoading] = useState(true)
 
   useEffect(() => {
-    if (!user) { router.push('/'); return }
+    if (!user) { router.replace('/'); return }
+    if (!canAccess(user, 'SUPPORT')) { router.replace(getRedirectPath(user)); return }
     loadAll()
   }, [])
 
@@ -65,7 +66,9 @@ export default function SupportPage() {
     PENDING: '#e0c14f', ASSIGNED: '#5aa9e6',
   }
 
-  if (!user) return null
+  if (!user) return <div className="min-h-screen bg-bg" />
+
+  const isSuperAdmin = user.roles.includes('SUPER_ADMIN')
 
   return (
     <div className="min-h-screen bg-bg flex flex-col">
