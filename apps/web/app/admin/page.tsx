@@ -118,6 +118,9 @@ export default function AdminPage() {
   const [allUsers, setAllUsers] = useState<any[]>([])
   const [assigningPlace, setAssigningPlace] = useState<any>(null)
   const [assignUserId, setAssignUserId] = useState('')
+  const [showPlaceModal, setShowPlaceModal] = useState(false)
+  const [placeForm, setPlaceForm] = useState({ name: '', address: '', regionId: '', capacity: '', contactPhone: '' })
+  const [placeSaving, setPlaceSaving] = useState(false)
 
   useEffect(() => {
     if (!user) { router.replace('/'); return }
@@ -253,6 +256,24 @@ export default function AdminPage() {
     } catch (e: any) { alert(e.message) }
   }
 
+  async function createPlace() {
+    setPlaceSaving(true)
+    try {
+      await api.post('/accommodation/places', {
+        name: placeForm.name,
+        address: placeForm.address,
+        regionId: placeForm.regionId,
+        capacity: parseInt(placeForm.capacity),
+        contactPhone: placeForm.contactPhone || undefined,
+        isActive: true,
+      })
+      setShowPlaceModal(false)
+      setPlaceForm({ name: '', address: '', regionId: '', capacity: '', contactPhone: '' })
+      await loadPlaces()
+    } catch (e: any) { alert(e.message) }
+    finally { setPlaceSaving(false) }
+  }
+
   async function saveSetting(key: string) {
     try {
       await api.put(`/settings/${key}`, { value: settingValues[key] || '' })
@@ -371,7 +392,10 @@ export default function AdminPage() {
         {/* ACCOMMODATION */}
         {tab === 'اسکان' && (
           <div>
-            <div className="text-base font-bold mb-4">مدیریت اماکن اسکان</div>
+            <div className="flex items-center justify-between mb-4">
+              <div className="text-base font-bold">مدیریت اماکن اسکان</div>
+              <button onClick={() => setShowPlaceModal(true)} className="px-4 py-2 rounded-lg text-xs font-bold" style={{ background: '#56c48a', color: '#070d15' }}>+ ایجاد مکان جدید</button>
+            </div>
             <div className="space-y-3">
               {places.map((pl: any) => (
                 <div key={pl.id} className="bg-bg-card border border-border rounded-2xl p-4">
@@ -534,6 +558,47 @@ export default function AdminPage() {
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40"
                 style={{ background: '#c2a35a', color: '#1a1206' }}>
                 {userSaving ? 'در حال ذخیره...' : editingUser ? 'ذخیره تغییرات' : 'ایجاد کاربر'}
+              </button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Create Place Modal */}
+      {showPlaceModal && (
+        <Modal title="ایجاد مکان اسکان جدید" onClose={() => setShowPlaceModal(false)}>
+          <div className="space-y-4">
+            <div>
+              <label className="block text-xs text-text-secondary mb-1.5">نام مکان</label>
+              <input value={placeForm.name} onChange={e => setPlaceForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none" placeholder="مثال: مجتمع مسکونی بهاران" />
+            </div>
+            <div>
+              <label className="block text-xs text-text-secondary mb-1.5">منطقه</label>
+              <select value={placeForm.regionId} onChange={e => setPlaceForm(p => ({ ...p, regionId: e.target.value }))} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none">
+                <option value="">انتخاب منطقه...</option>
+                {regions.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs text-text-secondary mb-1.5">ظرفیت (نفر)</label>
+                <input type="number" min="1" value={placeForm.capacity} onChange={e => setPlaceForm(p => ({ ...p, capacity: e.target.value }))} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none" />
+              </div>
+              <div>
+                <label className="block text-xs text-text-secondary mb-1.5">تلفن تماس</label>
+                <input value={placeForm.contactPhone} onChange={e => setPlaceForm(p => ({ ...p, contactPhone: e.target.value }))} dir="ltr" className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none text-left" />
+              </div>
+            </div>
+            <div>
+              <label className="block text-xs text-text-secondary mb-1.5">آدرس</label>
+              <textarea value={placeForm.address} onChange={e => setPlaceForm(p => ({ ...p, address: e.target.value }))} rows={2} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none resize-none" />
+            </div>
+            <div className="flex gap-2 pt-1">
+              <button onClick={() => setShowPlaceModal(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm text-text-muted">لغو</button>
+              <button onClick={createPlace} disabled={placeSaving || !placeForm.name || !placeForm.regionId || !placeForm.capacity}
+                className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40"
+                style={{ background: '#56c48a', color: '#070d15' }}>
+                {placeSaving ? 'در حال ذخیره...' : 'ایجاد مکان'}
               </button>
             </div>
           </div>

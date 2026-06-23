@@ -1,0 +1,62 @@
+# Build results
+[Dd]ebug/
+[Dd]ebugPublic/
+[Rr]elease/
+[Rr]eleases/
+x64/
+x86/
+[Ww][Ii][Nn]32/
+[Aa][Rr][Mm]/
+[Aa][Rr][Mm]64/
+bld/
+[Bb]in/
+[Oo]bj/
+[Ll]og/
+[Ll]ogs/
+
+# Visual Studio
+.vs/
+*.user
+*.suo
+
+# Node.js - IGNORE node_modules but TRACK source
+node_modules/
+apps/**/node_modules/
+apps/**/.next/
+apps/**/.turbo/
+apps/**/dist/
+apps/**/build/
+apps/**/.env.local
+
+# Force track source code
+!apps/
+!apps/*/src/
+!apps/admin-portal/src/
+!apps/website/src/
+!apps/admin-portal/package.json
+!apps/admin-portal/package-lock.json
+!apps/website/package.json
+!apps/website/package-lock.json
+!apps/admin-portal/tsconfig.json
+!apps/website/tsconfig.json
+!apps/admin-portal/next.config.js
+!apps/website/next.config.js
+!apps/admin-portal/public/
+!apps/website/public/
+
+# .NET
+*.pdb
+*.cache
+.nuget/
+
+# IDE
+.idea/
+.vscode/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Other
+*.tmp
+*.log

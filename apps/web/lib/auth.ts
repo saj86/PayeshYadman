@@ -10,7 +10,7 @@ export interface User {
   appAccess: string[]
 }
 
-export type AppArea = 'HQ' | 'INSPECTOR' | 'CITIZEN' | 'SUPPORT' | 'DISTRICT' | 'ADMIN' | 'COMMANDER' | 'ACCOMMODATION'
+export type AppArea = 'HQ' | 'INSPECTOR' | 'CITIZEN' | 'SUPPORT' | 'DISTRICT' | 'ADMIN' | 'COMMANDER' | 'ACCOMMODATION' | 'OPERATOR_137'
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -24,6 +24,7 @@ const ACCESS_RULES: Record<AppArea, (u: User) => boolean> = {
   DISTRICT:      u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('DISTRICT'),
   COMMANDER:     u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('COMMANDER'),
   ACCOMMODATION: u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('ACCOMMODATION'),
+  OPERATOR_137:  u => u.roles.includes('SUPER_ADMIN') || u.appAccess.includes('OPERATOR_137'),
 }
 
 export function canAccess(user: User, area: AppArea): boolean {
@@ -94,6 +95,7 @@ export function getRedirectPath(user: User): string {
   if (appAccess.includes('SUPPORT'))           return '/support'
   if (appAccess.includes('COMMANDER'))         return '/commander'
   if (appAccess.includes('ACCOMMODATION'))     return '/accommodation'
+  if (appAccess.includes('OPERATOR_137'))      return '/operator'
   if (appAccess.includes('DISTRICT'))          return '/district'
   if (appAccess.includes('CITIZEN'))           return '/citizen'
   return '/'

@@ -12,6 +12,8 @@ import { Roles } from '../../common/decorators/roles.decorator'
 export class AccommodationController {
   constructor(private service: AccommodationService) {}
 
+  // ─── Places ───────────────────────────────────────────────────────────────
+
   @Get('places')
   getPlaces(@Query('regionId') regionId?: string) {
     return this.service.getPlaces(regionId)
@@ -24,16 +26,24 @@ export class AccommodationController {
   }
 
   @Post('places')
-  @Roles('SUPER_ADMIN', 'HQ_MANAGER')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT')
   createPlace(@Body() body: any) {
     return this.service.createPlace(body)
   }
 
   @Put('places/:id')
-  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'ACCOMMODATION_MANAGER')
-  updatePlace(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT', 'ACCOMMODATION_MANAGER')
+  updatePlace(@Param('id') id: string, @Body() body: any) {
     return this.service.updatePlace(id, body)
   }
+
+  @Put('places/:id/manager')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT')
+  assignManager(@Param('id') id: string, @Body() body: { userId: string }) {
+    return this.service.assignManager(id, body.userId)
+  }
+
+  // ─── Requests ─────────────────────────────────────────────────────────────
 
   @Get('requests')
   getRequests(@Request() req: any) {
@@ -50,9 +60,26 @@ export class AccommodationController {
     return this.service.updateRequest(id, body.status, req.user.sub, req.user.roles)
   }
 
-  @Put('places/:id/manager')
-  @Roles('SUPER_ADMIN', 'HQ_MANAGER')
-  assignManager(@Param('id') id: string, @Body() body: { userId: string }) {
-    return this.service.assignManager(id, body.userId)
+  // ─── Applications ─────────────────────────────────────────────────────────
+
+  @Post('applications')
+  createApplication(@Body() body: any, @Request() req: any) {
+    return this.service.createApplication(body, req.user.sub)
+  }
+
+  @Get('applications')
+  getApplications(@Request() req: any, @Query('status') status?: string) {
+    return this.service.getApplications(req.user.sub, req.user.roles, status)
+  }
+
+  @Get('applications/:id')
+  getApplication(@Param('id') id: string, @Request() req: any) {
+    return this.service.getApplication(id, req.user.sub, req.user.roles)
+  }
+
+  @Put('applications/:id/review')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT', 'COMMANDER')
+  reviewApplication(@Param('id') id: string, @Body() body: { status: string; reviewNote?: string }, @Request() req: any) {
+    return this.service.reviewApplication(id, body.status, body.reviewNote, req.user.sub, req.user.roles)
   }
 }

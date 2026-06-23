@@ -18,6 +18,7 @@ enum AppType {
   DISTRICT
   COMMANDER
   ACCOMMODATION
+  OPERATOR_137
 }
 
 enum RegionLevel {
@@ -53,10 +54,21 @@ enum SubmissionPriority {
 
 enum CitizenReportStatus {
   PENDING
+  UNDER_REVIEW
   ASSIGNED
   IN_PROGRESS
+  NEEDS_INFO
   RESOLVED
+  REJECTED
   CLOSED
+}
+
+enum AccommodationApplicationStatus {
+  SUBMITTED
+  UNDER_REVIEW
+  NEEDS_INFO
+  APPROVED
+  REJECTED
 }
 
 enum CitizenReportPriority {
@@ -64,6 +76,23 @@ enum CitizenReportPriority {
   MEDIUM
   HIGH
   CRITICAL
+}
+
+enum AccommodationPlaceStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+enum AccommodationPlaceType {
+  SCHOOL
+  MOSQUE
+  SPORTS_HALL
+  HUSAINIYEH
+  HOTEL
+  EMERGENCY_CENTER
+  WAREHOUSE
+  OTHER
 }
 
 enum AccommodationRequestStatus {
@@ -147,6 +176,9 @@ model User {
 
   accommodationRequests AccommodationRequest[] @relation("Requester")
   managedPlace          AccommodationPlace?    @relation("PlaceManager")
+  assignedAccommodationPlaces AccommodationPlace[] @relation("PlaceInspector")
+  createdAccommodationPlaces  AccommodationPlace[] @relation("PlaceCreator")
+  approvedAccommodationPlaces AccommodationPlace[] @relation("PlaceApprover")
 
   lostFoundReports LostFoundPerson[] @relation("ReportedBy")
 
@@ -159,6 +191,9 @@ model User {
   comments    Comment[]
   attachments Attachment[]
   auditLogs   AuditLog[]
+
+  submittedAccommodationApplications AccommodationApplication[] @relation("AppSubmitter")
+  reviewedAccommodationApplications  AccommodationApplication[] @relation("AppReviewer")
 
   supportTickets         SupportTicket[] @relation("TicketReporter")
   assignedSupportTickets SupportTicket[] @relation("TicketAssignedTo")
@@ -247,6 +282,7 @@ model Region {
 
   inspectionLocations InspectionLocation[]
   accommodationPlaces AccommodationPlace[]
+  accommodationApplications AccommodationApplication[]
 
   @@index([parentId])
   @@index([level])
@@ -363,6 +399,9 @@ model CitizenReport {
   status       CitizenReportStatus   @default(PENDING)
   priority     CitizenReportPriority @default(MEDIUM)
   assignedToId String?
+  callerName   String?
+  callerPhone  String?
+  source       String                @default("CITIZEN_APP")
   createdAt    DateTime              @default(now())
   updatedAt    DateTime              @updatedAt
 
@@ -377,25 +416,59 @@ model CitizenReport {
 }
 
 model AccommodationPlace {
-  id               String  @id @default(cuid())
-  name             String
-  address          String
-  regionId         String
-  capacity         Int
-  currentOccupancy Int     @default(0)
-  contactPhone     String?
-  isActive         Boolean @default(true)
-  managerId        String? @unique
-  lat              Float?
-  lng              Float?
+  id                  String                   @id @default(cuid())
+  name                String
+  type                AccommodationPlaceType   @default(OTHER)
+  address             String
+  regionId            String
+  capacity            Int
+  maleCapacity        Int?
+  femaleCapacity      Int?
+  currentOccupancy    Int                      @default(0)
+  contactPhone        String?
+  emergencyPhone      String?
+  licenseNumber       String?
+  description         String?
+  ownerName           String?
+  ownerPhone          String?
+  floorCount          Int?
+  roomCount           Int?
+  toiletCount         Int?
+  hasKitchen          Boolean                  @default(false)
+  hasMedical          Boolean                  @default(false)
+  hasParking          Boolean                  @default(false)
+  hasDisabilityAccess Boolean                  @default(false)
+  hasBackupPower      Boolean                  @default(false)
+  hasWater            Boolean                  @default(true)
+  status              AccommodationPlaceStatus @default(PENDING)
+  isActive            Boolean                  @default(true)
+  managerId           String?                  @unique
+  assignedInspectorId String?
+  createdById         String?
+  approvedById        String?
+  approvedAt          DateTime?
+  rejectionReason     String?
+  deletedAt           DateTime?
+  lat                 Float?
+  lng                 Float?
+  createdAt           DateTime                 @default(now())
+  updatedAt           DateTime                 @updatedAt
 
-  region   Region                 @relation(fields: [regionId], references: [id])
-  manager  User?                  @relation("PlaceManager", fields: [managerId], references: [id])
-  requests AccommodationRequest[]
+  region            Region                    @relation(fields: [regionId], references: [id])
+  manager           User?                     @relation("PlaceManager", fields: [managerId], references: [id])
+  assignedInspector User?                     @relation("PlaceInspector", fields: [assignedInspectorId], references: [id])
+  createdBy         User?                     @relation("PlaceCreator", fields: [createdById], references: [id])
+  approvedBy        User?                     @relation("PlaceApprover", fields: [approvedById], references: [id])
+  requests          AccommodationRequest[]
+  application       AccommodationApplication? @relation("PlaceFromApp")
 
   @@index([regionId])
+  @@index([status])
   @@index([isActive])
   @@index([managerId])
+  @@index([assignedInspectorId])
+  @@index([createdAt])
+  @@index([deletedAt])
 }
 
 model AccommodationRequest {
@@ -473,6 +546,35 @@ model Assignment {
 
   @@index([inspectionSubmissionId])
   @@index([assignedToId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model AccommodationApplication {
+  id            String                         @id @default(cuid())
+  submittedById String
+  name          String
+  address       String
+  regionId      String
+  capacity      Int
+  contactName   String
+  contactEmail  String
+  contactPhone  String?
+  description   String?
+  status        AccommodationApplicationStatus @default(SUBMITTED)
+  reviewNote    String?
+  reviewedById  String?
+  reviewedAt    DateTime?
+  createdPlaceId String?                       @unique
+  createdAt     DateTime                       @default(now())
+  updatedAt     DateTime                       @updatedAt
+
+  submittedBy  User               @relation("AppSubmitter", fields: [submittedById], references: [id])
+  reviewedBy   User?              @relation("AppReviewer", fields: [reviewedById], references: [id])
+  region       Region             @relation(fields: [regionId], references: [id])
+  createdPlace AccommodationPlace? @relation("PlaceFromApp", fields: [createdPlaceId], references: [id])
+
+  @@index([submittedById])
   @@index([status])
   @@index([createdAt])
 }

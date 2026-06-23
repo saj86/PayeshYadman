@@ -2,7 +2,7 @@ import {
   PrismaClient, AppType, RegionLevel,
   InspectionStatus, ReviewAction,
   CitizenReportStatus, CitizenReportPriority,
-  AccommodationRequestStatus,
+  AccommodationRequestStatus, AccommodationPlaceStatus, AccommodationPlaceType,
   LostFoundStatus, Gender,
   EmergencyStatus, EmergencyPriority,
   AssignmentStatus,
@@ -145,6 +145,12 @@ async function main() {
       ],
       appTypes: [AppType.SUPPORT],
     },
+    {
+      name: 'OPERATOR_137', displayName: 'اپراتور سامانه ۱۳۷',
+      description: 'ثبت گزارش شهروندان از طریق تماس تلفنی',
+      perms: ['reports:create', 'reports:read'],
+      appTypes: [AppType.OPERATOR_137],
+    },
   ]
 
   const roleIds: Record<string, string> = {}
@@ -246,6 +252,8 @@ async function main() {
     { id_key: 'cit3',    email: 'citizen3@payesh.ir',      fullName: 'حسین رحیمی',             role: 'CITIZEN',               appTypes: [AppType.CITIZEN] },
     { id_key: 'sup',     email: 'support@payesh.ir',       fullName: 'کارشناس پشتیبانی',        role: 'SUPPORT',               appTypes: [AppType.SUPPORT] },
     { id_key: 'accom',   email: 'accommodation@payesh.ir', fullName: 'مسئول اسکان منطقه ۱۲',  role: 'ACCOMMODATION_MANAGER', appTypes: [AppType.ACCOMMODATION] },
+    { id_key: 'op137',   email: 'operator137@payesh.ir',   fullName: 'اپراتور ۱۳۷ — رضوی',     role: 'OPERATOR_137',          appTypes: [AppType.OPERATOR_137] },
+    { id_key: 'op137b',  email: 'operator137b@payesh.ir',  fullName: 'اپراتور ۱۳۷ — موسوی',    role: 'OPERATOR_137',          appTypes: [AppType.OPERATOR_137] },
   ]
 
   const U: Record<string, string> = {}
@@ -430,16 +438,97 @@ async function main() {
   }
   console.log('✅ Citizen reports seeded (12 reports)')
 
+  // ─── 9b. Operator 137 Reports ─────────────────────────────────────────────
+  const opReports = [
+    { id: 'orpt-01', opKey: 'op137',  callerName: 'آقای صادقی',      callerPhone: '09121234567', category: 'زیرساخت',    title: 'آسفالت خیابان ترک برداشته',          description: 'تماس‌گیرنده اعلام کرد آسفالت خیابان کارگر جنوبی ترک عمیقی دارد و برای موتورسیکلت خطرناک است.', address: 'خیابان کارگر جنوبی — بین میدان انقلاب و راه‌آهن', lat: 35.703, lng: 51.399, status: 'PENDING'     as CitizenReportStatus, priority: 'MEDIUM'   as CitizenReportPriority, daysAgo: 0 },
+    { id: 'orpt-02', opKey: 'op137',  callerName: 'خانم محمدی',       callerPhone: '09362345678', category: 'آلودگی',      title: 'زباله روی پل عابر پیاده',             description: 'شهروند گزارش داد کنار پل عابر پیاده ولیعصر نزدیک میدان ونک زباله تلنبار شده و بوی آزاردهنده دارد.', address: 'پل عابر پیاده ولیعصر — میدان ونک', lat: 35.758, lng: 51.411, status: 'ASSIGNED'    as CitizenReportStatus, priority: 'HIGH'      as CitizenReportPriority, daysAgo: 1 },
+    { id: 'orpt-03', opKey: 'op137b', callerName: 'آقای کریمی',       callerPhone: '09193456789', category: 'ایمنی',       title: 'گودال حفاری رها شده بدون علائم',     description: 'تماس‌گیرنده از گودالی در پیاده‌رو خبر داده که هیچ علامت ایمنی یا نرده‌ای ندارد. خطر برای عابران.', address: 'خیابان آزادی — نبش کوچه شهید ملکی', lat: 35.699, lng: 51.338, status: 'IN_PROGRESS' as CitizenReportStatus, priority: 'HIGH'      as CitizenReportPriority, daysAgo: 2 },
+    { id: 'orpt-04', opKey: 'op137b', callerName: 'خانم احمدپور',     callerPhone: '09104567890', category: 'خدمات شهری', title: 'آب گرم محله قطع است',               description: 'ساکن خیابان امیرآباد گزارش داده که آب گرم از دو روز پیش قطع است و شرکت آب اعلام نکرده.', address: 'خیابان امیرآباد شمالی — پلاک ۱۵', lat: 35.731, lng: 51.414, status: 'PENDING'     as CitizenReportStatus, priority: 'MEDIUM'   as CitizenReportPriority, daysAgo: 1 },
+    { id: 'orpt-05', opKey: 'op137',  callerName: 'آقای غلامی',       callerPhone: '09155678901', category: 'فضای سبز',   title: 'درختان خیابان بریده نشده‌اند',       description: 'شهروند اعلام کرد شاخه‌های درختان بلوار کشاورز به کابل‌های برق نزدیک شده و خطر برق‌گرفتگی دارد.', address: 'بلوار کشاورز — بین چهارراه کالج و فلسطین', lat: 35.707, lng: 51.397, status: 'RESOLVED'   as CitizenReportStatus, priority: 'HIGH'      as CitizenReportPriority, daysAgo: 5 },
+  ]
+  for (const r of opReports) {
+    const createdAt = daysAgo(r.daysAgo)
+    await prisma.citizenReport.create({
+      data: {
+        id: r.id, reporterId: U[r.opKey], category: r.category, title: r.title,
+        description: r.description, lat: r.lat, lng: r.lng, address: r.address,
+        status: r.status, priority: r.priority,
+        callerName: r.callerName, callerPhone: r.callerPhone, source: 'OPERATOR_137',
+        assignedToId: ['ASSIGNED', 'IN_PROGRESS'].includes(r.status) ? U.hq : undefined,
+        createdAt, updatedAt: createdAt,
+      },
+    })
+  }
+  console.log('✅ Operator 137 reports seeded (5 reports)')
+
   // ─── 10. Accommodation Places ─────────────────────────────────────────────
   const places = [
-    { id: 'place-01', name: 'مدرسه شهید بهشتی',       address: 'خیابان امیرآباد، کوچه ۳',         regionId: rids[5],  capacity: 200, currentOccupancy: 120, contactPhone: '021-88001234' },
-    { id: 'place-02', name: 'سالن ورزشی آزادی',        address: 'مجموعه ورزشی آزادی',               regionId: rids[10], capacity: 500, currentOccupancy: 340, contactPhone: '021-66001122' },
-    { id: 'place-03', name: 'مسجد امام رضا(ع)',         address: 'میدان شهدا — کوچه حسنی',          regionId: rids[11], capacity: 150, currentOccupancy: 80,  contactPhone: '021-55001500', managerId: U.accom, lat: 35.679, lng: 51.423 },
-    { id: 'place-04', name: 'حسینیه اعظم منطقه ۱۱',   address: 'خیابان رستمی — کوچه ۱۵',         regionId: rids[10], capacity: 300, currentOccupancy: 0,   contactPhone: '021-55882200' },
-    { id: 'place-05', name: 'مدرسه ابوریحان',           address: 'خیابان پیروزی — نبش ارمغان',      regionId: rids[14], capacity: 180, currentOccupancy: 45,  contactPhone: '021-77113344' },
+    {
+      id: 'place-01', name: 'مدرسه شهید بهشتی', type: AccommodationPlaceType.SCHOOL,
+      address: 'خیابان امیرآباد، کوچه ۳', regionId: rids[5],
+      capacity: 200, maleCapacity: 100, femaleCapacity: 100, currentOccupancy: 120,
+      contactPhone: '021-88001234', emergencyPhone: '021-88001235',
+      licenseNumber: 'EDU-1401-0023', ownerName: 'اداره آموزش و پرورش منطقه ۶',
+      floorCount: 3, roomCount: 18, toiletCount: 12,
+      hasKitchen: true, hasMedical: true, hasParking: true, hasDisabilityAccess: false, hasBackupPower: true, hasWater: true,
+      description: 'مدرسه سه‌طبقه با ظرفیت کامل، دارای آشپزخانه مرکزی و پایگاه امداد.',
+      status: AccommodationPlaceStatus.APPROVED, isActive: true,
+      createdById: U.admin, approvedById: U.admin, approvedAt: daysAgo(10),
+    },
+    {
+      id: 'place-02', name: 'سالن ورزشی آزادی', type: AccommodationPlaceType.SPORTS_HALL,
+      address: 'مجموعه ورزشی آزادی', regionId: rids[10],
+      capacity: 500, maleCapacity: 300, femaleCapacity: 200, currentOccupancy: 340,
+      contactPhone: '021-66001122', emergencyPhone: '021-66001100',
+      licenseNumber: 'SPT-1401-0007',
+      floorCount: 1, roomCount: 4, toiletCount: 20,
+      hasKitchen: true, hasMedical: true, hasParking: true, hasDisabilityAccess: true, hasBackupPower: true, hasWater: true,
+      description: 'سالن ورزشی بزرگ با ظرفیت بالا، مجهز به امکانات کامل رفاهی.',
+      status: AccommodationPlaceStatus.APPROVED, isActive: true,
+      createdById: U.admin, approvedById: U.hq, approvedAt: daysAgo(8),
+    },
+    {
+      id: 'place-03', name: 'مسجد امام رضا(ع)', type: AccommodationPlaceType.MOSQUE,
+      address: 'میدان شهدا — کوچه حسنی', regionId: rids[11],
+      capacity: 150, maleCapacity: 80, femaleCapacity: 70, currentOccupancy: 80,
+      contactPhone: '021-55001500', emergencyPhone: '021-55001501',
+      licenseNumber: 'MSJ-1401-0041', ownerName: 'هیئت امنای مسجد امام رضا',
+      floorCount: 2, roomCount: 6, toiletCount: 8,
+      hasKitchen: true, hasMedical: false, hasParking: false, hasDisabilityAccess: true, hasBackupPower: false, hasWater: true,
+      description: 'مسجد دو طبقه با موقعیت مرکزی، مناسب برای اسکان خانواده‌ها.',
+      status: AccommodationPlaceStatus.APPROVED, isActive: true,
+      managerId: U.accom, lat: 35.679, lng: 51.423,
+      createdById: U.accom, approvedById: U.hq, approvedAt: daysAgo(7),
+      assignedInspectorId: U.ins,
+    },
+    {
+      id: 'place-04', name: 'حسینیه اعظم منطقه ۱۱', type: AccommodationPlaceType.HUSAINIYEH,
+      address: 'خیابان رستمی — کوچه ۱۵', regionId: rids[10],
+      capacity: 300, currentOccupancy: 0,
+      contactPhone: '021-55882200',
+      licenseNumber: 'HSN-1401-0012',
+      floorCount: 1, roomCount: 3, toiletCount: 10,
+      hasKitchen: true, hasMedical: false, hasParking: true, hasDisabilityAccess: false, hasBackupPower: false, hasWater: true,
+      description: 'حسینیه بزرگ با فضای باز مجاور، مناسب برای تجمع‌های بزرگ.',
+      status: AccommodationPlaceStatus.PENDING, isActive: true,
+      createdById: U.dist,
+    },
+    {
+      id: 'place-05', name: 'مدرسه ابوریحان', type: AccommodationPlaceType.SCHOOL,
+      address: 'خیابان پیروزی — نبش ارمغان', regionId: rids[14],
+      capacity: 180, maleCapacity: 90, femaleCapacity: 90, currentOccupancy: 45,
+      contactPhone: '021-77113344',
+      licenseNumber: 'EDU-1401-0055',
+      floorCount: 2, roomCount: 12, toiletCount: 8,
+      hasKitchen: false, hasMedical: true, hasParking: false, hasDisabilityAccess: false, hasBackupPower: true, hasWater: true,
+      description: 'مدرسه دو طبقه، دارای امکانات بهداشتی و پایگاه امداد.',
+      status: AccommodationPlaceStatus.APPROVED, isActive: true,
+      createdById: U.admin, approvedById: U.admin, approvedAt: daysAgo(5),
+      assignedInspectorId: U.ins2,
+    },
   ]
   for (const p of places) {
-    await prisma.accommodationPlace.create({ data: { ...p, isActive: true } })
+    await prisma.accommodationPlace.create({ data: { ...p } })
   }
   console.log('✅ Accommodation places seeded (5 places)')
 
@@ -584,11 +673,11 @@ async function main() {
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
  SEEDED DATA SUMMARY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-  Users              : 11 (across all roles)
+  Users              : 13 (across all roles)
   Regions            : city + 22 regions + 12 districts + 4 zones
   Inspection Locations: 8
   Inspection Submissions: 15 (5 approved, 2 conditional, 2 rejected, 1 revisit, 2 assigned, 1 review, 2 pending)
-  Citizen Reports    : 12
+  Citizen Reports    : 17 (12 citizen + 5 operator 137)
   Accommodation Places: 5
   Accommodation Requests: 10 (4 approved, 3 pending, 1 rejected, 1 completed, 1 cancelled)
   Lost/Found Records : 6 (4 missing, 2 found)
@@ -611,6 +700,8 @@ async function main() {
   citizen3@payesh.ir      → CITIZEN           → /citizen
   support@payesh.ir       → SUPPORT           → /support
   accommodation@payesh.ir → ACCOMMODATION_MGR → /accommodation (مسجد امام رضا)
+  operator137@payesh.ir   → OPERATOR_137      → /operator
+  operator137b@payesh.ir  → OPERATOR_137      → /operator
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 `)
 }

@@ -20,6 +20,7 @@ import { SupportModule } from './modules/support/support.module'
 import { NotificationsModule } from './modules/notifications/notifications.module'
 import { InspectionLocationsModule } from './modules/inspection-locations/inspection-locations.module'
 import { SettingsModule } from './modules/settings/settings.module'
+import { AttachmentsModule } from './modules/attachments/attachments.module'
 import configuration from './config/configuration'
 import { validateConfig } from './config/config.validation'
 
@@ -54,6 +55,7 @@ import { validateConfig } from './config/config.validation'
     NotificationsModule,
     InspectionLocationsModule,
     SettingsModule,
+    AttachmentsModule,
   ],
   providers: [
     { provide: APP_GUARD, useClass: ThrottlerGuard },
