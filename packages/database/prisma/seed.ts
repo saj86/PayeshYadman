@@ -303,21 +303,47 @@ async function main() {
     data: { id: 'cl-main', name: 'چک‌لیست استاندارد نظارت میدانی', version: 1, isActive: true },
   })
   const itemDefs = [
-    { id: 'cli-01', label: 'ظرفیت و امنیت محوطه', category: 'ایمنی',       isMandatory: true,  weight: 2.0, order: 1 },
-    { id: 'cli-02', label: 'سرویس بهداشتی کافی',   category: 'بهداشت',     isMandatory: true,  weight: 1.5, order: 2 },
-    { id: 'cli-03', label: 'تأمین آب آشامیدنی',    category: 'بهداشت',     isMandatory: true,  weight: 1.5, order: 3 },
-    { id: 'cli-04', label: 'پذیرایی مناسب',         category: 'پذیرایی',    isMandatory: false, weight: 1.0, order: 4 },
-    { id: 'cli-05', label: 'دسترسی حمل‌ونقل عمومی', category: 'حمل‌ونقل',  isMandatory: false, weight: 1.0, order: 5 },
-    { id: 'cli-06', label: 'نیروی پزشکی حاضر',      category: 'پزشکی',      isMandatory: true,  weight: 2.0, order: 6 },
-    { id: 'cli-07', label: 'سیستم اطلاع‌رسانی فعال', category: 'ارتباطات', isMandatory: false, weight: 0.5, order: 7 },
-    { id: 'cli-08', label: 'روشنایی کافی',           category: 'تجهیزات',   isMandatory: false, weight: 0.5, order: 8 },
-    { id: 'cli-09', label: 'علائم هدایت جمعیت',     category: 'ایمنی',      isMandatory: true,  weight: 1.5, order: 9 },
-    { id: 'cli-10', label: 'گروه مدیریت بحران',      category: 'ایمنی',      isMandatory: true,  weight: 2.0, order: 10 },
+    // ── ایمنی و امنیت ────────────────────────────────────────────────────────
+    { id: 'cli-01', label: 'ظرفیت و امنیت محوطه',          category: 'ایمنی',        isMandatory: true,  weight: 2.0, order: 1 },
+    { id: 'cli-09', label: 'علائم هدایت جمعیت',             category: 'ایمنی',        isMandatory: true,  weight: 1.5, order: 2 },
+    { id: 'cli-10', label: 'گروه مدیریت بحران',              category: 'ایمنی',        isMandatory: true,  weight: 2.0, order: 3 },
+    { id: 'cli-11', label: 'کپسول‌های اطفاء حریق موجود',     category: 'ایمنی',        isMandatory: true,  weight: 1.5, order: 4 },
+    { id: 'cli-12', label: 'مسیر خروج اضطراری مشخص',         category: 'ایمنی',        isMandatory: true,  weight: 2.0, order: 5 },
+    // ── بهداشت ───────────────────────────────────────────────────────────────
+    { id: 'cli-02', label: 'سرویس بهداشتی کافی',            category: 'بهداشت',       isMandatory: true,  weight: 1.5, order: 6 },
+    { id: 'cli-03', label: 'تأمین آب آشامیدنی',             category: 'بهداشت',       isMandatory: true,  weight: 1.5, order: 7 },
+    { id: 'cli-13', label: 'سطل زباله و مدیریت پسماند',      category: 'بهداشت',       isMandatory: true,  weight: 1.0, order: 8 },
+    { id: 'cli-14', label: 'نظافت عمومی محیط',               category: 'بهداشت',       isMandatory: false, weight: 1.0, order: 9 },
+    // ── آشپزخانه و غذا ───────────────────────────────────────────────────────
+    { id: 'cli-k01', label: 'آشپزخانه سالم و استاندارد',     category: 'آشپزخانه',     isMandatory: true,  weight: 2.0, order: 10 },
+    { id: 'cli-k02', label: 'منبع آب مناسب آشپزخانه',        category: 'آشپزخانه',     isMandatory: true,  weight: 1.5, order: 11 },
+    { id: 'cli-k03', label: 'تجهیزات پخت کافی (اجاق/فر)',    category: 'آشپزخانه',     isMandatory: true,  weight: 1.5, order: 12 },
+    { id: 'cli-k04', label: 'سیستم نگهداری سرد (یخچال)',      category: 'آشپزخانه',     isMandatory: true,  weight: 2.0, order: 13 },
+    { id: 'cli-k05', label: 'انبار غذای خشک بهداشتی',         category: 'آشپزخانه',     isMandatory: false, weight: 1.0, order: 14 },
+    { id: 'cli-k06', label: 'رعایت اصول بهداشت غذا',          category: 'آشپزخانه',     isMandatory: true,  weight: 2.0, order: 15 },
+    { id: 'cli-k07', label: 'ظرفیت پخت کافی (نسبت به جمعیت)', category: 'آشپزخانه',   isMandatory: true,  weight: 1.5, order: 16 },
+    { id: 'cli-k08', label: 'جداسازی مناطق آشپزی از محل اسکان', category: 'آشپزخانه', isMandatory: false, weight: 1.0, order: 17 },
+    { id: 'cli-k09', label: 'نظافت ظروف و تجهیزات',           category: 'آشپزخانه',     isMandatory: false, weight: 0.5, order: 18 },
+    { id: 'cli-k10', label: 'موجودی حداقل ۳ روز مواد غذایی',  category: 'آشپزخانه',    isMandatory: false, weight: 1.0, order: 19 },
+    // ── پزشکی ────────────────────────────────────────────────────────────────
+    { id: 'cli-06', label: 'نیروی پزشکی یا امداد حاضر',       category: 'پزشکی',        isMandatory: true,  weight: 2.0, order: 20 },
+    { id: 'cli-15', label: 'کیت کمک‌های اولیه موجود',          category: 'پزشکی',        isMandatory: true,  weight: 1.5, order: 21 },
+    { id: 'cli-16', label: 'برنامه پیشگیری از بیماری‌های واگیر', category: 'پزشکی',     isMandatory: false, weight: 1.0, order: 22 },
+    // ── تجهیزات و زیرساخت ────────────────────────────────────────────────────
+    { id: 'cli-08', label: 'روشنایی کافی',                      category: 'تجهیزات',     isMandatory: false, weight: 0.5, order: 23 },
+    { id: 'cli-17', label: 'برق و نیروی پشتیبان (ژنراتور)',     category: 'تجهیزات',     isMandatory: false, weight: 1.0, order: 24 },
+    { id: 'cli-18', label: 'تهویه مناسب سالن‌ها',               category: 'تجهیزات',     isMandatory: false, weight: 0.5, order: 25 },
+    // ── ارتباطات و مدیریت ────────────────────────────────────────────────────
+    { id: 'cli-07', label: 'سیستم اطلاع‌رسانی فعال',            category: 'ارتباطات',    isMandatory: false, weight: 0.5, order: 26 },
+    { id: 'cli-04', label: 'پذیرایی و ثبت نام مناسب',           category: 'ارتباطات',    isMandatory: false, weight: 1.0, order: 27 },
+    // ── حمل‌ونقل ─────────────────────────────────────────────────────────────
+    { id: 'cli-05', label: 'دسترسی حمل‌ونقل عمومی',             category: 'حمل‌ونقل',   isMandatory: false, weight: 1.0, order: 28 },
+    { id: 'cli-19', label: 'پارکینگ کافی برای اتوبوس‌ها',       category: 'حمل‌ونقل',   isMandatory: false, weight: 0.5, order: 29 },
   ]
   for (const item of itemDefs) {
     await prisma.checklistItem.create({ data: { ...item, checklistId: cl.id } })
   }
-  console.log('✅ Checklist seeded (10 items)')
+  console.log(`✅ Checklist seeded (${itemDefs.length} items across 7 categories)`)
 
   // ─── 8. Inspection Submissions + Reviews + Checklist Responses ────────────
   // Helper to create checklist responses (all pass → high score)

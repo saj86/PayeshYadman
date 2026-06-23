@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Put, Body, Param, Query, UseGuards, Request } from '@nestjs/common'
+import { Controller, Get, Post, Put, Delete, Body, Param, Query, UseGuards, Request } from '@nestjs/common'
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger'
 import { AccommodationService } from './accommodation.service'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
@@ -15,8 +15,32 @@ export class AccommodationController {
   // ─── Places ───────────────────────────────────────────────────────────────
 
   @Get('places')
-  getPlaces(@Query('regionId') regionId?: string) {
-    return this.service.getPlaces(regionId)
+  getPlaces(
+    @Query('regionId') regionId?: string,
+    @Query('status') status?: string,
+    @Query('search') search?: string,
+    @Query('inspectorId') inspectorId?: string,
+    @Query('page') page?: string,
+    @Query('limit') limit?: string,
+    @Query('sortBy') sortBy?: string,
+    @Query('sortOrder') sortOrder?: string,
+  ) {
+    return this.service.getPlaces({
+      regionId, status, search, inspectorId,
+      page: page ? parseInt(page, 10) : undefined,
+      limit: limit ? parseInt(limit, 10) : undefined,
+      sortBy, sortOrder: sortOrder as 'asc' | 'desc' | undefined,
+    })
+  }
+
+  @Get('places/my-inspector')
+  getInspectorPlaces(@Request() req: any) {
+    return this.service.getInspectorPlaces(req.user.sub)
+  }
+
+  @Get('places/:id')
+  getPlace(@Param('id') id: string) {
+    return this.service.getPlace(id)
   }
 
   @Get('my-place')
@@ -26,21 +50,48 @@ export class AccommodationController {
   }
 
   @Post('places')
-  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT')
-  createPlace(@Body() body: any) {
-    return this.service.createPlace(body)
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT', 'COMMANDER', 'DISTRICT_MANAGER')
+  createPlace(@Body() body: any, @Request() req: any) {
+    return this.service.createPlace(body, req.user.sub, req.user.roles)
   }
 
   @Put('places/:id')
   @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT', 'ACCOMMODATION_MANAGER')
-  updatePlace(@Param('id') id: string, @Body() body: any) {
-    return this.service.updatePlace(id, body)
+  updatePlace(@Param('id') id: string, @Body() body: any, @Request() req: any) {
+    return this.service.updatePlace(id, body, req.user.sub, req.user.roles)
+  }
+
+  @Put('places/:id/status')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT', 'COMMANDER')
+  updatePlaceStatus(
+    @Param('id') id: string,
+    @Body() body: { status: 'APPROVED' | 'REJECTED'; rejectionReason?: string },
+    @Request() req: any,
+  ) {
+    if (body.status === 'APPROVED') return this.service.approvePlace(id, req.user.sub, req.user.roles)
+    return this.service.rejectPlace(id, body.rejectionReason || '', req.user.sub, req.user.roles)
+  }
+
+  @Put('places/:id/assign-inspector')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT', 'COMMANDER')
+  assignInspector(
+    @Param('id') id: string,
+    @Body() body: { inspectorId: string | null },
+    @Request() req: any,
+  ) {
+    return this.service.assignInspector(id, body.inspectorId, req.user.sub, req.user.roles)
   }
 
   @Put('places/:id/manager')
   @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT')
   assignManager(@Param('id') id: string, @Body() body: { userId: string }) {
     return this.service.assignManager(id, body.userId)
+  }
+
+  @Delete('places/:id')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT')
+  deletePlace(@Param('id') id: string, @Request() req: any) {
+    return this.service.deletePlace(id, req.user.sub, req.user.roles)
   }
 
   // ─── Requests ─────────────────────────────────────────────────────────────
@@ -79,7 +130,11 @@ export class AccommodationController {
 
   @Put('applications/:id/review')
   @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'SUPPORT', 'COMMANDER')
-  reviewApplication(@Param('id') id: string, @Body() body: { status: string; reviewNote?: string }, @Request() req: any) {
+  reviewApplication(
+    @Param('id') id: string,
+    @Body() body: { status: string; reviewNote?: string },
+    @Request() req: any,
+  ) {
     return this.service.reviewApplication(id, body.status, body.reviewNote, req.user.sub, req.user.roles)
   }
 }

@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { getStoredUser, logout, canAccess, getRedirectPath } from '@/lib/auth'
 import api from '@/lib/api'
+import AccommodationManager from '@/components/AccommodationManager'
 
 const TABS = ['گزارش‌های شهری', 'اسکان', 'بازرسان', 'کاربران', 'تیکت‌ها', 'لاگ‌ها']
 
@@ -71,19 +72,6 @@ export default function SupportPage() {
   const [assignInspectorId, setAssignInspectorId] = useState('')
   const [newStatus, setNewStatus] = useState('')
 
-  // Accommodation
-  const [places, setPlaces] = useState<any[]>([])
-  const [applications, setApplications] = useState<any[]>([])
-  const [allUsers, setAllUsers] = useState<any[]>([])
-  const [regions, setRegions] = useState<any[]>([])
-  const [assigningPlace, setAssigningPlace] = useState<any>(null)
-  const [assignUserId, setAssignUserId] = useState('')
-  const [selectedApp, setSelectedApp] = useState<any>(null)
-  const [reviewNote, setReviewNote] = useState('')
-  const [showPlaceModal, setShowPlaceModal] = useState(false)
-  const [placeForm, setPlaceForm] = useState({ name: '', address: '', regionId: '', capacity: '', contactPhone: '' })
-  const [placeSaving, setPlaceSaving] = useState(false)
-
   // Users
   const [users, setUsers] = useState<any>({ data: [], total: 0, totalPages: 1 })
   const [userPage, setUserPage] = useState(1)
@@ -109,7 +97,6 @@ export default function SupportPage() {
 
   useEffect(() => {
     if (tab === 'گزارش‌های شهری') loadReports()
-    if (tab === 'اسکان') loadAccommodation()
     if (tab === 'بازرسان') loadInspectors()
     if (tab === 'کاربران') loadUsers(1)
     if (tab === 'تیکت‌ها') loadTickets()
@@ -123,23 +110,6 @@ export default function SupportPage() {
       if (reportStatusFilter) params.set('status', reportStatusFilter)
       const res: any = await api.get(`/reports?${params}`)
       setReports(res?.data || [])
-    } catch (e) { console.error(e) }
-    finally { setLoading(false) }
-  }
-
-  async function loadAccommodation() {
-    setLoading(true)
-    try {
-      const [p, apps, u, r] = await Promise.all([
-        api.get('/accommodation/places'),
-        api.get('/accommodation/applications'),
-        api.get('/users?limit=200&status=active'),
-        api.get('/regions'),
-      ])
-      setPlaces(Array.isArray(p) ? p : [])
-      setApplications(Array.isArray(apps) ? apps : [])
-      setAllUsers(u?.data || [])
-      setRegions(Array.isArray(r) ? r : r?.data || [])
     } catch (e) { console.error(e) }
     finally { setLoading(false) }
   }
@@ -197,42 +167,6 @@ export default function SupportPage() {
     } catch (e: any) { alert(e.message) }
   }
 
-  // ── Accommodation actions ───────────────────────────────────────────────────
-  async function doAssignManager() {
-    if (!assigningPlace || !assignUserId) return
-    try {
-      await api.put(`/accommodation/places/${assigningPlace.id}/manager`, { userId: assignUserId })
-      setAssigningPlace(null)
-      setAssignUserId('')
-      await loadAccommodation()
-    } catch (e: any) { alert(e.message) }
-  }
-
-  async function reviewApplication(status: 'APPROVED' | 'REJECTED') {
-    if (!selectedApp) return
-    try {
-      await api.put(`/accommodation/applications/${selectedApp.id}/review`, { status, reviewNote })
-      setSelectedApp(null)
-      setReviewNote('')
-      await loadAccommodation()
-    } catch (e: any) { alert(e.message) }
-  }
-
-  async function createPlace() {
-    setPlaceSaving(true)
-    try {
-      await api.post('/accommodation/places', {
-        name: placeForm.name, address: placeForm.address,
-        regionId: placeForm.regionId, capacity: parseInt(placeForm.capacity),
-        contactPhone: placeForm.contactPhone || undefined, isActive: true,
-      })
-      setShowPlaceModal(false)
-      setPlaceForm({ name: '', address: '', regionId: '', capacity: '', contactPhone: '' })
-      await loadAccommodation()
-    } catch (e: any) { alert(e.message) }
-    finally { setPlaceSaving(false) }
-  }
-
   // ── User actions ────────────────────────────────────────────────────────────
   function openCreate() {
     setEditingUser(null)
@@ -288,14 +222,6 @@ export default function SupportPage() {
       setShowPwModal(false)
     } catch (e: any) { setPwError(e.message) }
     finally { setPwSaving(false) }
-  }
-
-  const APP_STATUS_LABELS: Record<string, { label: string; color: string }> = {
-    SUBMITTED:    { label: 'ثبت شده',    color: '#e0c14f' },
-    UNDER_REVIEW: { label: 'در بررسی',   color: '#b08ce0' },
-    NEEDS_INFO:   { label: 'نیاز به اطلاعات', color: '#e0a450' },
-    APPROVED:     { label: 'تأیید شده',  color: '#56c48a' },
-    REJECTED:     { label: 'رد شده',     color: '#e07a7a' },
   }
 
   if (!user) return null
@@ -406,70 +332,7 @@ export default function SupportPage() {
 
         {/* ── ACCOMMODATION ─────────────────────────────────────────────────── */}
         {tab === 'اسکان' && (
-          <div className="space-y-6">
-            {/* Places */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <div className="text-sm font-bold">اماکن اسکان</div>
-                <button onClick={() => setShowPlaceModal(true)} className="px-3 py-1.5 rounded-lg text-xs font-bold" style={{ background: '#56c48a', color: '#070d15' }}>+ ایجاد مکان</button>
-              </div>
-              <div className="space-y-2">
-                {places.map((pl: any) => (
-                  <div key={pl.id} className="bg-bg-card border border-border rounded-2xl p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <div className="text-sm font-bold">{pl.name}</div>
-                        <div className="text-xs text-text-muted mt-0.5">{pl.address} — {pl.region?.name}</div>
-                        <div className="flex gap-4 text-xs mt-2">
-                          <span className="text-text-dim">ظرفیت: <strong className="text-text-primary">{pl.capacity}</strong></span>
-                          <span className="text-text-dim">مدیر: <strong className={pl.manager ? 'text-green' : 'text-red'}>{pl.manager?.fullName || 'تعیین نشده'}</strong></span>
-                        </div>
-                      </div>
-                      <button onClick={() => { setAssigningPlace(pl); setAssignUserId(pl.managerId || '') }}
-                        className="text-xs px-3 py-1.5 rounded-xl border border-border text-text-muted hover:border-blue/40 hover:text-blue transition-all flex-shrink-0">
-                        {pl.manager ? 'تغییر مدیر' : 'تعیین مدیر'}
-                      </button>
-                    </div>
-                    {assigningPlace?.id === pl.id && (
-                      <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
-                        <select value={assignUserId} onChange={e => setAssignUserId(e.target.value)}
-                          className="flex-1 px-3 py-2 bg-bg-dark border border-border rounded-lg text-sm focus:outline-none">
-                          <option value="">کاربر را انتخاب کنید...</option>
-                          {allUsers.map((u: any) => <option key={u.id} value={u.id}>{u.fullName} — {u.email}</option>)}
-                        </select>
-                        <button onClick={doAssignManager} disabled={!assignUserId} className="px-3 py-2 rounded-lg text-xs font-bold disabled:opacity-40" style={{ background: '#56c48a', color: '#070d15' }}>تعیین</button>
-                        <button onClick={() => setAssigningPlace(null)} className="px-3 py-2 rounded-lg text-xs border border-border text-text-muted">لغو</button>
-                      </div>
-                    )}
-                  </div>
-                ))}
-                {places.length === 0 && !loading && <div className="text-center py-8 text-text-muted text-sm border border-border rounded-2xl">مکانی یافت نشد</div>}
-              </div>
-            </div>
-
-            {/* Applications */}
-            <div>
-              <div className="text-sm font-bold mb-3">درخواست‌های ثبت مکان جدید</div>
-              <div className="space-y-2">
-                {applications.map((app: any) => {
-                  const st = APP_STATUS_LABELS[app.status] || APP_STATUS_LABELS.SUBMITTED
-                  return (
-                    <div key={app.id} className="bg-bg-card border border-border rounded-2xl p-4 cursor-pointer hover:border-blue/30 transition-all" onClick={() => { setSelectedApp(app); setReviewNote('') }}>
-                      <div className="flex items-start justify-between gap-2">
-                        <div>
-                          <div className="text-sm font-bold">{app.name}</div>
-                          <div className="text-xs text-text-muted mt-0.5">{app.address} — {app.region?.name}</div>
-                          <div className="text-xs text-text-dim mt-1">ثبت توسط: {app.submittedBy?.fullName} — ظرفیت: {app.capacity}</div>
-                        </div>
-                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0" style={{ color: st.color, background: `${st.color}20` }}>{st.label}</span>
-                      </div>
-                    </div>
-                  )
-                })}
-                {applications.length === 0 && !loading && <div className="text-center py-6 text-text-muted text-sm border border-border rounded-2xl">درخواستی وجود ندارد</div>}
-              </div>
-            </div>
-          </div>
+          <AccommodationManager canApprove={true} canDelete={true} canCreate={true} />
         )}
 
         {/* ── INSPECTORS ────────────────────────────────────────────────────── */}
@@ -590,68 +453,6 @@ export default function SupportPage() {
           </div>
         )}
       </div>
-
-      {/* ── Application Review Modal ────────────────────────────────────────── */}
-      {selectedApp && (
-        <Modal title={`بررسی درخواست: ${selectedApp.name}`} onClose={() => setSelectedApp(null)}>
-          <div className="space-y-4">
-            <div className="bg-bg rounded-xl p-3 space-y-1 text-xs">
-              <div><span className="text-text-muted">آدرس:</span> {selectedApp.address}</div>
-              <div><span className="text-text-muted">منطقه:</span> {selectedApp.region?.name}</div>
-              <div><span className="text-text-muted">ظرفیت:</span> {selectedApp.capacity} نفر</div>
-              <div><span className="text-text-muted">مسئول:</span> {selectedApp.contactName} — {selectedApp.contactEmail}</div>
-              {selectedApp.description && <div><span className="text-text-muted">توضیحات:</span> {selectedApp.description}</div>}
-              <div><span className="text-text-muted">ثبت‌کننده:</span> {selectedApp.submittedBy?.fullName}</div>
-            </div>
-            <div>
-              <label className="block text-xs text-text-secondary mb-1.5">یادداشت بررسی</label>
-              <textarea value={reviewNote} onChange={e => setReviewNote(e.target.value)} rows={3}
-                placeholder="دلیل تأیید یا رد..." className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none resize-none" />
-            </div>
-            <div className="flex gap-2">
-              <button onClick={() => reviewApplication('REJECTED')} className="flex-1 py-2.5 rounded-xl text-sm font-bold" style={{ background: 'rgba(224,122,122,.15)', color: '#e07a7a', border: '1px solid rgba(224,122,122,.3)' }}>رد درخواست</button>
-              <button onClick={() => reviewApplication('APPROVED')} className="flex-1 py-2.5 rounded-xl text-sm font-bold" style={{ background: 'rgba(86,196,138,.15)', color: '#56c48a', border: '1px solid rgba(86,196,138,.3)' }}>تأیید درخواست</button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* ── Create Place Modal ──────────────────────────────────────────────── */}
-      {showPlaceModal && (
-        <Modal title="ایجاد مکان اسکان جدید" onClose={() => setShowPlaceModal(false)}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs text-text-secondary mb-1.5">نام مکان</label>
-              <input value={placeForm.name} onChange={e => setPlaceForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none" placeholder="مثال: مجتمع مسکونی بهاران" />
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-text-secondary mb-1.5">منطقه</label>
-                <select value={placeForm.regionId} onChange={e => setPlaceForm(p => ({ ...p, regionId: e.target.value }))} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none">
-                  <option value="">انتخاب منطقه...</option>
-                  {regions.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
-                </select>
-              </div>
-              <div>
-                <label className="block text-xs text-text-secondary mb-1.5">ظرفیت (نفر)</label>
-                <input type="number" min="1" value={placeForm.capacity} onChange={e => setPlaceForm(p => ({ ...p, capacity: e.target.value }))} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-text-secondary mb-1.5">آدرس</label>
-              <textarea value={placeForm.address} onChange={e => setPlaceForm(p => ({ ...p, address: e.target.value }))} rows={2} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none resize-none" />
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setShowPlaceModal(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm text-text-muted">لغو</button>
-              <button onClick={createPlace} disabled={placeSaving || !placeForm.name || !placeForm.regionId || !placeForm.capacity}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40"
-                style={{ background: '#56c48a', color: '#070d15' }}>
-                {placeSaving ? 'در حال ذخیره...' : 'ایجاد مکان'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
 
       {/* ── User Create/Edit Modal ──────────────────────────────────────────── */}
       {showUserModal && (

@@ -33,16 +33,28 @@ export class AccommodationService {
 
   // ─── Places ───────────────────────────────────────────────────────────────
 
-  getPlaces(regionId?: string, status?: string) {
-    return this.prisma.accommodationPlace.findMany({
-      where: {
-        deletedAt: null,
-        ...(regionId ? { regionId } : {}),
-        ...(status ? { status: status as any } : {}),
-      },
-      include: PLACE_INCLUDE,
-      orderBy: { createdAt: 'desc' },
-    })
+  async getPlaces(params: {
+    regionId?: string; status?: string; search?: string;
+    inspectorId?: string; page?: number; limit?: number;
+    sortBy?: string; sortOrder?: 'asc' | 'desc';
+  }) {
+    const { regionId, status, search, inspectorId, page = 1, limit = 20, sortBy = 'createdAt', sortOrder = 'desc' } = params
+    const skip = (page - 1) * limit
+    const where: any = {
+      deletedAt: null,
+      ...(regionId ? { regionId } : {}),
+      ...(status ? { status: status as any } : {}),
+      ...(inspectorId ? { assignedInspectorId: inspectorId } : {}),
+      ...(search ? { name: { contains: search, mode: 'insensitive' } } : {}),
+    }
+    const allowedSort = ['createdAt', 'name', 'capacity', 'currentOccupancy', 'status']
+    const orderField = allowedSort.includes(sortBy) ? sortBy : 'createdAt'
+
+    const [data, total] = await Promise.all([
+      this.prisma.accommodationPlace.findMany({ where, skip, take: limit, include: PLACE_INCLUDE, orderBy: { [orderField]: sortOrder } }),
+      this.prisma.accommodationPlace.count({ where }),
+    ])
+    return { data, total, page, limit, totalPages: Math.ceil(total / limit) }
   }
 
   async getPlace(id: string) {

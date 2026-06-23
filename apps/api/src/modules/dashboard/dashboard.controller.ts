@@ -18,6 +18,12 @@ export class DashboardController {
     return this.dashboardService.getHQStats()
   }
 
+  @Get('commander')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'COMMANDER')
+  getCommanderStats() {
+    return this.dashboardService.getCommanderStats()
+  }
+
   @Get('activity')
   @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'COMMANDER', 'SUPPORT')
   getActivity(@Query('limit') limit?: string) {

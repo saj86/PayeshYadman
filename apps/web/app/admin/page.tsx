@@ -3,6 +3,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { getStoredUser, logout, canAccess, getRedirectPath } from '@/lib/auth'
 import api from '@/lib/api'
+import AccommodationManager from '@/components/AccommodationManager'
 
 const TABS = ['داشبورد', 'کاربران', 'اسکان', 'مناطق', 'نقش‌ها', 'تنظیمات']
 
@@ -113,15 +114,6 @@ export default function AdminPage() {
   const [pwSaving, setPwSaving] = useState(false)
   const [pwError, setPwError] = useState('')
 
-  // Accommodation state
-  const [places, setPlaces] = useState<any[]>([])
-  const [allUsers, setAllUsers] = useState<any[]>([])
-  const [assigningPlace, setAssigningPlace] = useState<any>(null)
-  const [assignUserId, setAssignUserId] = useState('')
-  const [showPlaceModal, setShowPlaceModal] = useState(false)
-  const [placeForm, setPlaceForm] = useState({ name: '', address: '', regionId: '', capacity: '', contactPhone: '' })
-  const [placeSaving, setPlaceSaving] = useState(false)
-
   useEffect(() => {
     if (!user) { router.replace('/'); return }
     if (!canAccess(user, 'ADMIN')) { router.replace(getRedirectPath(user)); return }
@@ -163,21 +155,6 @@ export default function AdminPage() {
   useEffect(() => {
     if (tab === 'کاربران') loadUsers(1, userSearch, userRoleFilter, userStatusFilter)
   }, [tab, userStatusFilter, userRoleFilter])
-
-  async function loadPlaces() {
-    try {
-      const [p, u] = await Promise.all([
-        api.get('/accommodation/places'),
-        api.get('/users?limit=100&status=active'),
-      ])
-      setPlaces(Array.isArray(p) ? p : [])
-      setAllUsers(u?.data || [])
-    } catch (e) { console.error(e) }
-  }
-
-  useEffect(() => {
-    if (tab === 'اسکان') loadPlaces()
-  }, [tab])
 
   function openCreate() {
     setEditingUser(null)
@@ -244,34 +221,6 @@ export default function AdminPage() {
       await api.patch(`/users/${u.id}/toggle-active`, { isActive: !u.isActive })
       await loadUsers(userPage)
     } catch (e: any) { alert(e.message) }
-  }
-
-  async function assignManager() {
-    if (!assigningPlace || !assignUserId) return
-    try {
-      await api.put(`/accommodation/places/${assigningPlace.id}/manager`, { userId: assignUserId })
-      setAssigningPlace(null)
-      setAssignUserId('')
-      await loadPlaces()
-    } catch (e: any) { alert(e.message) }
-  }
-
-  async function createPlace() {
-    setPlaceSaving(true)
-    try {
-      await api.post('/accommodation/places', {
-        name: placeForm.name,
-        address: placeForm.address,
-        regionId: placeForm.regionId,
-        capacity: parseInt(placeForm.capacity),
-        contactPhone: placeForm.contactPhone || undefined,
-        isActive: true,
-      })
-      setShowPlaceModal(false)
-      setPlaceForm({ name: '', address: '', regionId: '', capacity: '', contactPhone: '' })
-      await loadPlaces()
-    } catch (e: any) { alert(e.message) }
-    finally { setPlaceSaving(false) }
   }
 
   async function saveSetting(key: string) {
@@ -391,54 +340,7 @@ export default function AdminPage() {
 
         {/* ACCOMMODATION */}
         {tab === 'اسکان' && (
-          <div>
-            <div className="flex items-center justify-between mb-4">
-              <div className="text-base font-bold">مدیریت اماکن اسکان</div>
-              <button onClick={() => setShowPlaceModal(true)} className="px-4 py-2 rounded-lg text-xs font-bold" style={{ background: '#56c48a', color: '#070d15' }}>+ ایجاد مکان جدید</button>
-            </div>
-            <div className="space-y-3">
-              {places.map((pl: any) => (
-                <div key={pl.id} className="bg-bg-card border border-border rounded-2xl p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex-1">
-                      <div className="flex items-center gap-2 mb-1">
-                        <div className="text-sm font-bold">{pl.name}</div>
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-md ${pl.status === 'APPROVED' ? 'text-green bg-green/10 border border-green/20' : pl.status === 'PENDING' ? 'text-yellow bg-yellow/10 border border-yellow/20' : 'text-red bg-red/10 border border-red/20'}`}>{pl.status === 'APPROVED' ? 'تأیید شده' : pl.status === 'PENDING' ? 'در انتظار' : 'رد شده'}</span>
-                      </div>
-                      <div className="text-xs text-text-muted mb-2">{pl.address} — {pl.region?.name}</div>
-                      <div className="flex items-center gap-4 text-xs">
-                        <span className="text-text-dim">ظرفیت: <strong className="text-text-primary">{pl.capacity}</strong></span>
-                        <span className="text-text-dim">اشغال: <strong className="text-yellow">{pl.currentOccupancy}</strong></span>
-                        <span className="text-text-dim">مدیر: <strong className={pl.manager ? 'text-green' : 'text-red'}>{pl.manager?.fullName || 'تعیین نشده'}</strong></span>
-                      </div>
-                    </div>
-                    <button onClick={() => { setAssigningPlace(pl); setAssignUserId(pl.managerId || '') }}
-                      className="text-xs px-3 py-2 rounded-xl border border-border text-text-muted hover:border-blue/40 hover:text-blue transition-all flex-shrink-0">
-                      {pl.manager ? 'تغییر مدیر' : 'تعیین مدیر'}
-                    </button>
-                  </div>
-
-                  {assigningPlace?.id === pl.id && (
-                    <div className="mt-3 pt-3 border-t border-border flex items-center gap-2">
-                      <select value={assignUserId} onChange={e => setAssignUserId(e.target.value)}
-                        className="flex-1 px-3 py-2 bg-bg-dark border border-border rounded-lg text-sm focus:outline-none">
-                        <option value="">کاربر را انتخاب کنید...</option>
-                        {allUsers.map((u: any) => (
-                          <option key={u.id} value={u.id}>{u.fullName} — {u.email}</option>
-                        ))}
-                      </select>
-                      <button onClick={assignManager} disabled={!assignUserId}
-                        className="px-4 py-2 rounded-lg text-xs font-bold disabled:opacity-40"
-                        style={{ background: '#56c48a', color: '#070d15' }}>تعیین مدیر</button>
-                      <button onClick={() => setAssigningPlace(null)}
-                        className="px-3 py-2 rounded-lg text-xs border border-border text-text-muted">لغو</button>
-                    </div>
-                  )}
-                </div>
-              ))}
-              {places.length === 0 && <div className="text-center py-12 text-text-muted text-sm border border-border rounded-2xl">هیچ مکانی یافت نشد</div>}
-            </div>
-          </div>
+          <AccommodationManager canApprove={true} canDelete={true} canCreate={true} />
         )}
 
         {/* REGIONS */}
@@ -558,47 +460,6 @@ export default function AdminPage() {
                 className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40"
                 style={{ background: '#c2a35a', color: '#1a1206' }}>
                 {userSaving ? 'در حال ذخیره...' : editingUser ? 'ذخیره تغییرات' : 'ایجاد کاربر'}
-              </button>
-            </div>
-          </div>
-        </Modal>
-      )}
-
-      {/* Create Place Modal */}
-      {showPlaceModal && (
-        <Modal title="ایجاد مکان اسکان جدید" onClose={() => setShowPlaceModal(false)}>
-          <div className="space-y-4">
-            <div>
-              <label className="block text-xs text-text-secondary mb-1.5">نام مکان</label>
-              <input value={placeForm.name} onChange={e => setPlaceForm(p => ({ ...p, name: e.target.value }))} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none" placeholder="مثال: مجتمع مسکونی بهاران" />
-            </div>
-            <div>
-              <label className="block text-xs text-text-secondary mb-1.5">منطقه</label>
-              <select value={placeForm.regionId} onChange={e => setPlaceForm(p => ({ ...p, regionId: e.target.value }))} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none">
-                <option value="">انتخاب منطقه...</option>
-                {regions.map((r: any) => <option key={r.id} value={r.id}>{r.name}</option>)}
-              </select>
-            </div>
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-xs text-text-secondary mb-1.5">ظرفیت (نفر)</label>
-                <input type="number" min="1" value={placeForm.capacity} onChange={e => setPlaceForm(p => ({ ...p, capacity: e.target.value }))} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none" />
-              </div>
-              <div>
-                <label className="block text-xs text-text-secondary mb-1.5">تلفن تماس</label>
-                <input value={placeForm.contactPhone} onChange={e => setPlaceForm(p => ({ ...p, contactPhone: e.target.value }))} dir="ltr" className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none text-left" />
-              </div>
-            </div>
-            <div>
-              <label className="block text-xs text-text-secondary mb-1.5">آدرس</label>
-              <textarea value={placeForm.address} onChange={e => setPlaceForm(p => ({ ...p, address: e.target.value }))} rows={2} className="w-full px-3 py-2.5 bg-bg border border-border rounded-xl text-sm focus:outline-none resize-none" />
-            </div>
-            <div className="flex gap-2 pt-1">
-              <button onClick={() => setShowPlaceModal(false)} className="flex-1 py-2.5 rounded-xl border border-border text-sm text-text-muted">لغو</button>
-              <button onClick={createPlace} disabled={placeSaving || !placeForm.name || !placeForm.regionId || !placeForm.capacity}
-                className="flex-1 py-2.5 rounded-xl text-sm font-bold disabled:opacity-40"
-                style={{ background: '#56c48a', color: '#070d15' }}>
-                {placeSaving ? 'در حال ذخیره...' : 'ایجاد مکان'}
               </button>
             </div>
           </div>

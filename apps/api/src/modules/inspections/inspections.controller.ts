@@ -4,7 +4,7 @@ import { InspectionsService } from './inspections.service'
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard'
 import { RolesGuard } from '../../common/guards/roles.guard'
 import { Roles } from '../../common/decorators/roles.decorator'
-import { InspectionStatus, ReviewAction } from '@prisma/client'
+import { InspectionStatus, ReviewAction, ChecklistStatus } from '@prisma/client'
 
 @ApiTags('inspections')
 @ApiBearerAuth()
@@ -46,8 +46,44 @@ export class InspectionsController {
     return this.service.getQueue(req.user.sub)
   }
 
+  // ── Checklist workflow ─────────────────────────────────────────────────────
+
+  @Get(':id/checklist')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'COMMANDER', 'INSPECTOR', 'SUPPORT')
+  getChecklistDetail(@Param('id') id: string, @Request() req: any) {
+    return this.service.getChecklistDetail(id, req.user.sub, req.user.roles)
+  }
+
+  @Get(':id/checklist/history')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'COMMANDER', 'INSPECTOR', 'SUPPORT')
+  getChecklistHistory(@Param('id') id: string, @Request() req: any) {
+    return this.service.getChecklistHistory(id, req.user.sub, req.user.roles)
+  }
+
+  @Post(':id/checklist/submit')
+  @Roles('INSPECTOR', 'SUPER_ADMIN', 'HQ_MANAGER')
+  submitChecklist(
+    @Param('id') id: string,
+    @Body() body: { checklistResponses: any[]; notes?: string },
+    @Request() req: any,
+  ) {
+    return this.service.submitChecklist(id, req.user.sub, req.user.roles, body.checklistResponses, body.notes)
+  }
+
+  @Put(':id/checklist/status')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'COMMANDER', 'SUPPORT')
+  updateChecklistStatus(
+    @Param('id') id: string,
+    @Body() body: { status: ChecklistStatus; reason?: string; conditionNotes?: string },
+    @Request() req: any,
+  ) {
+    return this.service.updateChecklistStatus(id, req.user.sub, req.user.roles, body.status, body.reason, body.conditionNotes)
+  }
+
+  // ── Inspection submission ──────────────────────────────────────────────────
+
   @Get(':id')
-  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'COMMANDER', 'INSPECTOR', 'DISTRICT_MANAGER')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'COMMANDER', 'INSPECTOR', 'DISTRICT_MANAGER', 'SUPPORT')
   findOne(@Param('id') id: string, @Request() req: any) {
     return this.service.findOne(id, req.user.sub, req.user.roles)
   }

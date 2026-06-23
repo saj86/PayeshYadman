@@ -138,6 +138,18 @@ enum AssignmentStatus {
   REJECTED
 }
 
+enum ChecklistStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  RETURNED_FOR_CORRECTION
+  CORRECTED
+  APPROVED
+  APPROVED_WITH_CONDITIONS
+  REJECTED
+  CLOSED
+}
+
 enum SupportTicketStatus {
   OPEN
   IN_PROGRESS
@@ -197,6 +209,8 @@ model User {
 
   supportTickets         SupportTicket[] @relation("TicketReporter")
   assignedSupportTickets SupportTicket[] @relation("TicketAssignedTo")
+
+  checklistHistoryChanges ChecklistHistory[]
 
   notificationEvents NotificationEvent[]
   systemSettings     SystemSetting[]     @relation("UpdatedBy")
@@ -319,9 +333,13 @@ model InspectionSubmission {
   location    InspectionLocation @relation(fields: [locationId], references: [id])
   submittedBy User               @relation("SubmittedBy", fields: [submittedById], references: [id])
 
+  checklistStatus        ChecklistStatus @default(DRAFT)
+  checklistConditionNotes String?
+
   reviews           InspectionReview[]
   checklistResponses ChecklistResponse[]
   assignments       Assignment[]
+  checklistHistory  ChecklistHistory[]
 
   @@index([status])
   @@index([createdAt])
@@ -387,6 +405,24 @@ model ChecklistResponse {
   @@index([submissionId])
 }
 
+model ChecklistHistory {
+  id           String          @id @default(cuid())
+  submissionId String
+  fromStatus   ChecklistStatus?
+  toStatus     ChecklistStatus
+  changedById  String
+  reason       String?
+  conditionNotes String?
+  createdAt    DateTime        @default(now())
+
+  submission InspectionSubmission @relation(fields: [submissionId], references: [id])
+  changedBy  User                 @relation(fields: [changedById], references: [id])
+
+  @@index([submissionId])
+  @@index([changedById])
+  @@index([createdAt])
+}
+
 model CitizenReport {
   id           String                @id @default(cuid())
   reporterId   String
@@ -435,6 +471,12 @@ model AccommodationPlace {
   roomCount           Int?
   toiletCount         Int?
   hasKitchen          Boolean                  @default(false)
+  kitchenCapacity     Int?
+  hasCooking          Boolean                  @default(false)
+  hasRefrigerator     Boolean                  @default(false)
+  hasFoodStorage      Boolean                  @default(false)
+  mealServiceType     String?
+  kitchenNotes        String?
   hasMedical          Boolean                  @default(false)
   hasParking          Boolean                  @default(false)
   hasDisabilityAccess Boolean                  @default(false)
