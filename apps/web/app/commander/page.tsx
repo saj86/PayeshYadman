@@ -18,6 +18,13 @@ const STATUS_LABELS: Record<string, { label: string; color: string }> = {
   REJECTED:           { label: 'رد شده',          color: '#e07a7a' },
 }
 
+const PRIORITIES = [
+  { value: 'LOW',      label: 'کم',      color: '#56c48a' },
+  { value: 'MEDIUM',   label: 'متوسط',   color: '#5aa9e6' },
+  { value: 'HIGH',     label: 'بالا',    color: '#e0c14f' },
+  { value: 'CRITICAL', label: 'بحرانی', color: '#e07a7a' },
+]
+
 export default function CommanderPage() {
   const router = useRouter()
   const user = getStoredUser()
@@ -76,6 +83,14 @@ export default function CommanderPage() {
       setTab('INSPECTOR_ASSIGNED')
     } catch (e: any) { alert(e.message) }
     finally { setAssigning(false) }
+  }
+
+  async function setPriority(id: string, priority: string) {
+    try {
+      await api.put(`/inspections/${id}/priority`, { priority })
+      setSubmissions(prev => prev.map(s => s.id === id ? { ...s, priority } : s))
+      if (selected?.id === id) setSelected((p: any) => ({ ...p, priority }))
+    } catch (e: any) { alert(e.message) }
   }
 
   async function sendBack(id: string) {
@@ -157,8 +172,10 @@ export default function CommanderPage() {
                         <div className="text-sm font-bold">{s.location?.name}</div>
                         <div className="text-xs text-text-muted mt-0.5">{s.location?.category} — {s.location?.region?.name}</div>
                       </div>
-                      <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg flex-shrink-0"
-                        style={{ color: st.color, background: `${st.color}20` }}>{st.label}</span>
+                      <div className="flex items-center gap-1.5 flex-shrink-0">
+                        {(() => { const p = PRIORITIES.find(p => p.value === s.priority) || PRIORITIES[1]; return <span className="text-[10px] font-bold px-1.5 py-0.5 rounded" style={{ color: p.color, background: `${p.color}20` }}>{p.label}</span> })()}
+                        <span className="text-[11px] font-bold px-2 py-0.5 rounded-lg" style={{ color: st.color, background: `${st.color}20` }}>{st.label}</span>
+                      </div>
                     </div>
 
                     {s.notes && <div className="text-xs text-text-secondary bg-white/[.03] rounded-lg p-2 mb-2 leading-6">{s.notes}</div>}
@@ -195,6 +212,22 @@ export default function CommanderPage() {
                 <div className="text-sm font-bold text-blue mb-1">{selected.location?.name}</div>
                 <div className="text-xs text-text-secondary">{selected.location?.category} — {selected.location?.region?.name}</div>
                 <div className="text-xs text-text-muted mt-1">{selected.location?.address}</div>
+              </div>
+
+              {/* Priority control — always visible */}
+              <div className="mb-4">
+                <label className="block text-xs text-text-secondary mb-2">اولویت رسیدگی</label>
+                <div className="flex gap-1.5">
+                  {PRIORITIES.map(p => (
+                    <button key={p.value} onClick={() => setPriority(selected.id, p.value)}
+                      className="flex-1 py-1.5 rounded-lg text-[11px] font-bold transition-all border"
+                      style={selected.priority === p.value
+                        ? { background: `${p.color}25`, color: p.color, borderColor: `${p.color}50` }
+                        : { borderColor: 'rgba(255,255,255,.1)', color: '#7e93a8' }}>
+                      {p.label}
+                    </button>
+                  ))}
+                </div>
               </div>
 
               {selected.status === 'COMMANDER_REVIEW' ? (

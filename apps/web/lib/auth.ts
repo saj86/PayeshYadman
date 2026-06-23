@@ -30,6 +30,23 @@ export function canAccess(user: User, area: AppArea): boolean {
   return ACCESS_RULES[area]?.(user) ?? false
 }
 
+export async function register(email: string, password: string, fullName: string, phone?: string) {
+  const res = await fetch(`${API_URL}/auth/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, password, fullName, phone }),
+  })
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}))
+    throw new Error(err.message || 'خطا در ثبت‌نام')
+  }
+  const data = await res.json()
+  localStorage.setItem('accessToken', data.accessToken)
+  localStorage.setItem('refreshToken', data.refreshToken)
+  localStorage.setItem('user', JSON.stringify(data.user))
+  return data
+}
+
 export async function login(email: string, password: string) {
   const res = await fetch(`${API_URL}/auth/login`, {
     method: 'POST',

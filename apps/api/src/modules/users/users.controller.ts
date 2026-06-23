@@ -13,12 +13,14 @@ export class UsersController {
   constructor(private usersService: UsersService) {}
 
   @Get()
-  @Roles('SUPER_ADMIN', 'SUPPORT', 'HQ_MANAGER')
-  findAll(@Request() req: any,
+  @Roles('SUPER_ADMIN', 'SUPPORT', 'HQ_MANAGER', 'COMMANDER')
+  findAll(
+    @Request() req: any,
     @Query('page') page?: string,
     @Query('limit') limit?: string,
     @Query('search') search?: string,
     @Query('role') role?: string,
+    @Query('status') status?: string,
   ) {
     return this.usersService.findAll(
       page ? parseInt(page) : 1,
@@ -26,6 +28,7 @@ export class UsersController {
       search,
       role,
       req.user.roles,
+      status,
     )
   }
 
@@ -45,6 +48,24 @@ export class UsersController {
   @Roles('SUPER_ADMIN', 'SUPPORT')
   update(@Request() req: any, @Param('id') id: string, @Body() body: any) {
     return this.usersService.update(id, body, req.user.roles)
+  }
+
+  @Put(':id/roles')
+  @Roles('SUPER_ADMIN', 'SUPPORT')
+  updateRoles(@Request() req: any, @Param('id') id: string, @Body() body: { roleNames: string[] }) {
+    return this.usersService.updateRoles(id, body.roleNames, req.user.roles)
+  }
+
+  @Put(':id/app-access')
+  @Roles('SUPER_ADMIN', 'SUPPORT')
+  updateAppTypes(@Request() req: any, @Param('id') id: string, @Body() body: { appTypes: string[] }) {
+    return this.usersService.updateAppTypes(id, body.appTypes, req.user.roles)
+  }
+
+  @Patch(':id/toggle-active')
+  @Roles('SUPER_ADMIN', 'SUPPORT')
+  toggleActive(@Request() req: any, @Param('id') id: string, @Body() body: { isActive: boolean }) {
+    return this.usersService.toggleActive(id, body.isActive, req.user.roles)
   }
 
   @Patch(':id/reset-password')

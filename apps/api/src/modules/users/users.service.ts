@@ -27,11 +27,16 @@ export class UsersService {
     }
   }
 
-  async findAll(page = 1, limit = 20, search?: string, role?: string, callerRoles: string[] = []) {
+  async findAll(page = 1, limit = 20, search?: string, role?: string, callerRoles: string[] = [], status?: string) {
     const skip = (page - 1) * limit
-    const where: any = { isActive: true }
+    const where: any = {}
 
-    // SUPPORT users cannot see SUPER_ADMIN accounts
+    // Status filter: active (default), inactive, all
+    if (status === 'inactive') where.isActive = false
+    else if (status === 'all') {} // no filter
+    else where.isActive = true
+
+    // SUPPORT / non-super-admin cannot see SUPER_ADMIN accounts
     if (!this.isSuperAdmin(callerRoles)) {
       where.NOT = { userRoles: { some: { role: { name: 'SUPER_ADMIN' } } } }
     }
@@ -91,8 +96,42 @@ export class UsersService {
 
   async update(id: string, data: { fullName?: string; email?: string; isActive?: boolean }, callerRoles: string[] = []) {
     await this.findOne(id, callerRoles)
-    const updated = await this.prisma.user.update({ where: { id }, data })
+    const updated = await this.prisma.user.update({ where: { id }, data, include: USER_INCLUDE })
     return stripHash(updated)
+  }
+
+  async updateRoles(id: string, roleNames: string[], callerRoles: string[] = []) {
+    await this.findOne(id, callerRoles)
+    if (!this.isSuperAdmin(callerRoles) && roleNames.includes('SUPER_ADMIN')) {
+      throw new ForbiddenException('تخصیص نقش مدیر کل مجاز نیست')
+    }
+    const roles = await this.prisma.role.findMany({ where: { name: { in: roleNames } } })
+    await this.prisma.userRole.deleteMany({ where: { userId: id } })
+    if (roles.length > 0) {
+      await this.prisma.userRole.createMany({
+        data: roles.map(r => ({ userId: id, roleId: r.id })),
+        skipDuplicates: true,
+      })
+    }
+    return this.findOne(id, callerRoles)
+  }
+
+  async updateAppTypes(id: string, appTypes: string[], callerRoles: string[] = []) {
+    await this.findOne(id, callerRoles)
+    await this.prisma.userAppAccess.deleteMany({ where: { userId: id } })
+    if (appTypes.length > 0) {
+      await this.prisma.userAppAccess.createMany({
+        data: appTypes.map((appType: any) => ({ userId: id, appType, isActive: true })),
+        skipDuplicates: true,
+      })
+    }
+    return this.findOne(id, callerRoles)
+  }
+
+  async toggleActive(id: string, isActive: boolean, callerRoles: string[] = []) {
+    await this.findOne(id, callerRoles)
+    await this.prisma.user.update({ where: { id }, data: { isActive } })
+    return { message: isActive ? 'کاربر فعال شد' : 'کاربر غیرفعال شد' }
   }
 
   async resetPassword(id: string, newPassword: string, callerRoles: string[] = []) {

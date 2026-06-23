@@ -44,6 +44,13 @@ enum ReviewAction {
   CONDITIONAL
 }
 
+enum SubmissionPriority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
 enum CitizenReportStatus {
   PENDING
   ASSIGNED
@@ -269,6 +276,7 @@ model InspectionSubmission {
   status        InspectionStatus @default(PENDING)
   score         Float?
   notes         String?
+  priority      SubmissionPriority @default(MEDIUM)
   createdAt     DateTime         @default(now())
   updatedAt     DateTime         @updatedAt
 

@@ -147,4 +147,18 @@ export class InspectionsService {
     )
     return statuses.reduce((acc, status, i) => ({ ...acc, [status]: counts[i] }), {} as Record<string, number>)
   }
+
+  async setPriority(id: string, priority: string, callerId: string, callerRoles: string[]) {
+    const isHQ = callerRoles.some(r => HQ_ROLES.includes(r))
+    if (!isHQ) throw new ForbiddenException('تنها مدیران می‌توانند اولویت را تغییر دهند')
+    await this.findOne(id, callerId, callerRoles)
+    return this.prisma.inspectionSubmission.update({
+      where: { id },
+      data: { priority: priority as any },
+      include: {
+        location: { include: { region: true } },
+        submittedBy: { select: { fullName: true } },
+      },
+    })
+  }
 }

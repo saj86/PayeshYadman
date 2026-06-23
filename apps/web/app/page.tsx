@@ -156,8 +156,14 @@ export default function LoginPage() {
           </div>
         </div>
 
+        {/* Register link */}
+        <div className="mt-4 text-center">
+          <span className="text-xs text-text-muted">شهروند هستید؟ </span>
+          <button onClick={() => router.push('/register')} className="text-xs text-gold hover:underline font-semibold">ثبت‌نام کنید</button>
+        </div>
+
         {/* Footer info */}
-        <div className="flex items-center justify-between mt-5 text-xs text-text-dim px-1">
+        <div className="flex items-center justify-between mt-4 text-xs text-text-dim px-1">
           <span>نسخه ۱.۰.۰</span>
           <span>سامانه نظارت شهرداری تهران</span>
         </div>

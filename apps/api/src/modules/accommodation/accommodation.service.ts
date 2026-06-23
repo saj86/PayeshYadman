@@ -64,4 +64,31 @@ export class AccommodationService {
 
     return this.prisma.accommodationRequest.update({ where: { id }, data: { status: status as any } })
   }
+
+  async assignManager(placeId: string, userId: string) {
+    const place = await this.prisma.accommodationPlace.update({
+      where: { id: placeId },
+      data: { managerId: userId },
+      include: PLACE_INCLUDE,
+    })
+
+    // Ensure user has ACCOMMODATION_MANAGER role
+    const role = await this.prisma.role.findFirst({ where: { name: 'ACCOMMODATION_MANAGER' } })
+    if (role) {
+      await this.prisma.userRole.upsert({
+        where: { userId_roleId: { userId, roleId: role.id } },
+        create: { userId, roleId: role.id },
+        update: {},
+      })
+    }
+
+    // Ensure user has ACCOMMODATION app access
+    await this.prisma.userAppAccess.upsert({
+      where: { userId_appType: { userId, appType: 'ACCOMMODATION' } },
+      create: { userId, appType: 'ACCOMMODATION', isActive: true },
+      update: { isActive: true },
+    })
+
+    return place
+  }
 }

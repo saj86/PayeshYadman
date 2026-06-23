@@ -78,4 +78,10 @@ export class InspectionsController {
   ) {
     return this.service.review(id, req.user.sub, req.user.roles, body.action, body.notes, body.score, body.checklistResponses)
   }
+
+  @Put(':id/priority')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER', 'COMMANDER')
+  setPriority(@Param('id') id: string, @Body() body: { priority: string }, @Request() req: any) {
+    return this.service.setPriority(id, body.priority, req.user.sub, req.user.roles)
+  }
 }

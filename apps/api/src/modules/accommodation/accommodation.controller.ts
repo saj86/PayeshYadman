@@ -49,4 +49,10 @@ export class AccommodationController {
   updateRequest(@Param('id') id: string, @Body() body: { status: string }, @Request() req: any) {
     return this.service.updateRequest(id, body.status, req.user.sub, req.user.roles)
   }
+
+  @Put('places/:id/manager')
+  @Roles('SUPER_ADMIN', 'HQ_MANAGER')
+  assignManager(@Param('id') id: string, @Body() body: { userId: string }) {
+    return this.service.assignManager(id, body.userId)
+  }
 }
